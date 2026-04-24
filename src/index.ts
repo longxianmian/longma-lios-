@@ -2,6 +2,8 @@ import Fastify from 'fastify';
 import sensible from '@fastify/sensible';
 import { healthRoutes } from './routes/health';
 import { liosRoutes } from './routes/lios';
+import { pluginRoutes } from './routes/plugins';
+import { assetRoutes } from './routes/assets';
 import { pool } from './db/client';
 
 const app = Fastify({
@@ -18,6 +20,8 @@ async function main() {
   await app.register(sensible);
   await app.register(healthRoutes);
   await app.register(liosRoutes);
+  await app.register(pluginRoutes);
+  await app.register(assetRoutes);
 
   app.addHook('onClose', async () => {
     await pool.end();

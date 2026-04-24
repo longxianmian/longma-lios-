@@ -93,12 +93,65 @@ export interface LiosLedger {
   created_at: Date;
 }
 
+// ── Plugin types ─────────────────────────────────────────────────────────────
+
+export type PluginType       = 'llm' | 'tool' | 'retrieval';
+export type PluginOutputRole = 'candidate' | 'evidence';
+export type PluginStatus     = 'active' | 'disabled';
+export type InvocationStatus = 'ok' | 'error' | 'timeout';
+export type AssetType        = 'document' | 'policy' | 'knowledge' | 'template' | 'data';
+export type AssetScope       = 'industry' | 'enterprise' | 'project' | 'task' | 'role';
+
+export interface LiosPlugin {
+  id:          string;
+  tenant_id:   string;
+  name:        string;
+  description: string;
+  plugin_type: PluginType;
+  endpoint:    string;
+  config:      Record<string, unknown>;
+  output_role: PluginOutputRole;
+  status:      PluginStatus;
+  created_at:  Date;
+  updated_at:  Date;
+}
+
+export interface LiosPluginInvocation {
+  id:          string;
+  tenant_id:   string;
+  plugin_id:   string;
+  intent_id:   string | null;
+  input:       Record<string, unknown>;
+  output:      Record<string, unknown>;
+  output_role: PluginOutputRole;
+  latency_ms:  number | null;
+  status:      InvocationStatus;
+  error_msg:   string | null;
+  created_at:  Date;
+}
+
+export interface LiosAsset {
+  id:          string;
+  tenant_id:   string;
+  name:        string;
+  content:     string;
+  asset_type:  AssetType;
+  scope:       AssetScope;
+  scope_ref:   string;
+  tags:        string[];
+  metadata:    Record<string, unknown>;
+  is_indexed:  boolean;
+  created_at:  Date;
+  updated_at:  Date;
+}
+
 // ── API shapes ───────────────────────────────────────────────────────────────
 
 export interface RunRequest {
-  intent: string;
+  tenant_id?:  string;
+  intent:      string;
   session_id?: string;
-  context?: Record<string, unknown>;
+  context?:    Record<string, unknown>;
 }
 
 export interface RunResponse {
