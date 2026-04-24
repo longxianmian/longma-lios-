@@ -3,3 +3,9 @@ dist/
 .env
 .env.*
 *.log
+
+# Frontend
+web/node_modules/
+web/dist/
+web/.env
+web/.env.*
