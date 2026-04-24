@@ -10,6 +10,7 @@ import Assets from './pages/dashboard/Assets';
 import Plugins from './pages/dashboard/Plugins';
 import Decisions from './pages/dashboard/Decisions';
 import Employees from './pages/dashboard/Employees';
+import ChatTest from './pages/dashboard/ChatTest';
 
 import AdminLayout from './layouts/AdminLayout';
 import AdminOverview from './pages/admin/Overview';
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="plugins" element={<Plugins />} />
         <Route path="decisions" element={<Decisions />} />
         <Route path="employees" element={<Employees />} />
+        <Route path="chat-test" element={<ChatTest />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>

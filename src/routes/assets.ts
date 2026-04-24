@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { query, queryOne } from '../db/client';
 import { LiosAsset, AssetType, AssetScope } from '../types/lios';
+import { embedText, EMBEDDING_MODEL } from '../services/embedding';
 
 // Scope → candidate score heuristic (more specific scope = higher relevance)
 const SCOPE_SCORE: Record<AssetScope, number> = {
@@ -195,9 +196,9 @@ export async function assetRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { tenant_id, asset_ids } = req.body;
 
+      // Step 1: mark as indexed
       let updated: LiosAsset[];
       if (asset_ids && asset_ids.length > 0) {
-        // Selective reindex — also enforces tenant isolation
         updated = await query<LiosAsset>(
           `UPDATE lios_assets
            SET is_indexed = TRUE, updated_at = NOW()
@@ -208,7 +209,6 @@ export async function assetRoutes(app: FastifyInstance) {
           [tenant_id, asset_ids]
         );
       } else {
-        // Full reindex for tenant
         updated = await query<LiosAsset>(
           `UPDATE lios_assets
            SET is_indexed = TRUE, updated_at = NOW()
@@ -218,9 +218,38 @@ export async function assetRoutes(app: FastifyInstance) {
         );
       }
 
+      // Step 2: also embed any indexed assets that still lack embeddings
+      const needEmbed = await query<{ id: string; name: string; content: string }>(
+        `SELECT id, name, content FROM lios_assets
+         WHERE tenant_id = $1
+           AND is_indexed = TRUE
+           AND embedding IS NULL
+           AND content NOT LIKE '[待转录：%'`,
+        [tenant_id]
+      );
+
+      let embedded = 0;
+      let skipped  = 0;
+      for (const asset of needEmbed) {
+        try {
+          const vec = await embedText(`${asset.name}\n${asset.content}`);
+          await query(
+            `UPDATE lios_assets
+             SET embedding = $1::float4[], embedding_model = $2, updated_at = NOW()
+             WHERE id = $3`,
+            [`{${vec.join(',')}}`, EMBEDDING_MODEL, asset.id]
+          );
+          embedded++;
+        } catch {
+          skipped++;
+        }
+      }
+
       return reply.code(200).send({
         tenant_id,
         reindexed:    updated.length,
+        embedded,
+        skipped,
         asset_ids:    updated.map(a => a.id),
         available_in: 'Candidate Space (POST /lios/run)',
       });

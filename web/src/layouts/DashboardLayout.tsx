@@ -1,10 +1,11 @@
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { BrainCircuit, LayoutDashboard, Database, Puzzle, ClipboardList, Users, LogOut } from 'lucide-react';
+import { BrainCircuit, LayoutDashboard, Database, Puzzle, ClipboardList, Users, LogOut, MessageCircle } from 'lucide-react';
 import { getAuth, clearAuth } from '../lib/auth';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: '概览', icon: LayoutDashboard, end: true },
   { to: '/dashboard/assets', label: '资产管理', icon: Database, end: false },
+  { to: '/dashboard/chat-test', label: 'AI 客服测试', icon: MessageCircle, end: false },
   { to: '/dashboard/plugins', label: '插件配置', icon: Puzzle, end: false },
   { to: '/dashboard/decisions', label: '裁决记录', icon: ClipboardList, end: false },
   { to: '/dashboard/employees', label: '数字员工', icon: Users, end: false },
