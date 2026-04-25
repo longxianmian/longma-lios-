@@ -12,7 +12,7 @@ import { decisionRoutes } from './routes/decisions';
 import { chatRoutes } from './routes/chat';
 import { compareTestRoutes } from './routes/compareTest';
 import { pool } from './db/client';
-import { redis } from './queue/redis';
+import { redis, redisPub } from './queue/redis';
 import { ensureGroups } from './queue/streams';
 import { initWebSocketServer } from './ws/server';
 import { startIntentWorker } from './queue/workers/intentWorker';
@@ -52,6 +52,7 @@ async function main() {
   app.addHook('onClose', async () => {
     await pool.end();
     redis.disconnect();
+    redisPub.disconnect();
   });
 
   // ── P1: Redis + WebSocket + Workers ──────────────────────────────────────

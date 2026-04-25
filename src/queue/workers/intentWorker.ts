@@ -86,7 +86,7 @@ async function processIntent(fields: Record<string, string>): Promise<void> {
     intent_id,
     analysis_json:   JSON.stringify(analysis),
     kb_assets_json:  JSON.stringify(kbAssets),
-    kb_context,
+    kb_context: kbContext,
     candidate_score: String(candidateScore),
   });
 }

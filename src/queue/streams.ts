@@ -1,4 +1,4 @@
-import { redis } from './redis';
+import { redis, redisPub } from './redis';
 
 export const QUEUES = {
   INTENT:   'lios:queue:intent',
@@ -15,10 +15,11 @@ export const GROUPS = {
 } as const;
 
 export async function ensureGroups(): Promise<void> {
+  await redisPub.connect();
   for (const [key, queue] of Object.entries(QUEUES)) {
     const group = GROUPS[key as keyof typeof GROUPS];
     try {
-      await redis.xgroup('CREATE', queue, group, '$', 'MKSTREAM');
+      await redisPub.xgroup('CREATE', queue, group, '$', 'MKSTREAM');
     } catch (e: unknown) {
       if (!(e as Error).message?.includes('BUSYGROUP')) throw e;
     }
@@ -28,7 +29,7 @@ export async function ensureGroups(): Promise<void> {
 export async function pushToQueue(queue: string, fields: Record<string, string>): Promise<void> {
   const flat: string[] = [];
   for (const [k, v] of Object.entries(fields)) flat.push(k, v);
-  await redis.xadd(queue, '*', ...flat);
+  await redisPub.xadd(queue, '*', ...flat);
 }
 
 // Returns parsed messages from a consumer group.
