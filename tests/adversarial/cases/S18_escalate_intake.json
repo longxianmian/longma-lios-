@@ -1,0 +1,21 @@
+{
+  "id": "S18",
+  "label": "转人工·首次请求 → intake (verdict=0)",
+  "turns": [
+    "我要找人工客服"
+  ],
+  "expected_verdicts": [
+    0
+  ],
+  "expected_scope_contains_any": [
+    "escalation_intake"
+  ],
+  "max_len_per_turn": 60,
+  "must_have_any": [
+    "訂單|問題|描述|提供|需要|協助"
+  ],
+  "must_not_match": [
+    "為了協助您處理退貨",
+    "為了幫您辦理"
+  ]
+}

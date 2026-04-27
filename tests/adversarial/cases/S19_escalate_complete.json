@@ -1,0 +1,19 @@
+{
+  "id": "S19",
+  "label": "转人工·完整流程 (intake → 提供 → escalate -2 + 上下文打包)",
+  "turns": [
+    "我之前买的产品坏了，我要找人工",
+    "订单 2988789，X9 无法开机",
+    "麻烦尽快帮我处理"
+  ],
+  "expected_verdicts": [
+    0,
+    null,
+    -2
+  ],
+  "max_len_per_turn": 100,
+  "extra_checks": [
+    "last_turn_is_escalate",
+    "handoff_context_packaged"
+  ]
+}

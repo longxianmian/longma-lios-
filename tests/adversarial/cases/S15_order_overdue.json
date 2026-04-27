@@ -1,0 +1,17 @@
+{
+  "id": "S15",
+  "label": "订单核验·100002 已超退货期 → 0",
+  "turns": ["我要退貨 100002"],
+  "expected_verdicts": [0],
+  "expected_scope_contains_any": ["order_overdue"],
+  "max_len_per_turn": 120,
+  "must_have_any": ["超.*退貨期|超期|期限|過期"],
+  "must_not_match": [
+    "查無此訂單",
+    "資料已轉給人工客服"
+  ],
+  "extra_checks": [
+    "ledger_verifications_classification_exists_belongs_overdue",
+    "ledger_second_pass_verdict_is_0"
+  ]
+}

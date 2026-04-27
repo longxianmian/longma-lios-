@@ -1,0 +1,23 @@
+{
+  "id": "S14",
+  "label": "订单核验·787678 not_found → 0 婉转追问",
+  "turns": ["我的訂單號是 787678 想退貨"],
+  "expected_verdicts": [0],
+  "max_len_per_turn": 80,
+  "must_have_any": ["確認.*訂單編號|再.*確認"],
+  "must_not_match": [
+    "查無此訂單",
+    "查无此订单",
+    "查不到.*訂單",
+    "找不到.*訂單",
+    "沒有.*這筆訂單",
+    "系統.*無此",
+    "資料已轉給人工客服",
+    "已為您轉接人工客服"
+  ],
+  "extra_checks": [
+    "ledger_extracted_identifiers_has_order_787678",
+    "ledger_verifications_classification_not_found",
+    "ledger_second_pass_verdict_is_0"
+  ]
+}

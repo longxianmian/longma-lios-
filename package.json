@@ -11,7 +11,13 @@
     "migrate:v2": "tsx src/db/migrate_v2.ts",
     "migrate:v3": "tsx src/db/migrate_v3.ts",
     "migrate:v4": "tsx src/db/migrate_v4.ts",
-    "migrate:v6": "tsx src/db/migrate_v6.ts"
+    "migrate:v6": "tsx src/db/migrate_v6.ts",
+    "migrate:v7": "tsx src/db/migrate_v7.ts",
+    "migrate:v8": "tsx src/db/migrate_v8.ts",
+    "migrate:v9": "tsx src/db/migrate_v9.ts",
+    "migrate:v9:down": "tsx src/db/migrate_v9_down.ts",
+    "migrate:v10": "tsx src/db/migrate_v10.ts",
+    "migrate:v10:down": "tsx src/db/migrate_v10_down.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

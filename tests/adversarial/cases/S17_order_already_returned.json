@@ -1,0 +1,17 @@
+{
+  "id": "S17",
+  "label": "订单核验·100003 已退货不能再退 → 0",
+  "turns": ["100003 我想再退一次"],
+  "expected_verdicts": [0],
+  "expected_scope_contains_any": ["order_already_returned"],
+  "max_len_per_turn": 120,
+  "must_have_any": ["已.*退貨|已申請|不能.*重複|無法.*重複|無法.*再次|已退过"],
+  "must_not_match": [
+    "查無此訂單",
+    "資料已轉給人工客服"
+  ],
+  "extra_checks": [
+    "ledger_verifications_classification_already_returned",
+    "ledger_second_pass_verdict_is_0"
+  ]
+}

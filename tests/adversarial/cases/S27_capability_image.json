@@ -1,0 +1,12 @@
+{
+  "id": "S27",
+  "label": "用户问能传照片：基于 capability 答不支持，引导文字",
+  "turns": ["我能传照片给你看商品损坏吗"],
+  "expected_verdicts": [1],
+  "max_len_per_turn": 100,
+  "must_have_any": ["不支援.*圖片|不支持.*圖|文字描述|用文字"],
+  "must_not_match": ["請問您想了解|請告訴我您"],
+  "extra_checks": [
+    "scope_includes_capability_answer"
+  ]
+}

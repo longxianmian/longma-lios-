@@ -1,0 +1,16 @@
+{
+  "id": "S16",
+  "label": "订单核验·100005 非本店 → -1",
+  "turns": ["100005 这单要退货"],
+  "expected_verdicts": [-1],
+  "expected_scope_contains_any": ["wrong_shop"],
+  "max_len_per_turn": 120,
+  "must_have_any": ["不.*本店|非本店|不是.*本店|實際購買|聯繫.*商家|聯繫.*平台"],
+  "must_not_match": [
+    "查無此訂單"
+  ],
+  "extra_checks": [
+    "ledger_verifications_classification_wrong_shop",
+    "ledger_second_pass_verdict_is_-1"
+  ]
+}

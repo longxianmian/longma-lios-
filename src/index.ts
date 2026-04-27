@@ -11,10 +11,12 @@ import { tenantRoutes } from './routes/tenants';
 import { decisionRoutes } from './routes/decisions';
 import { chatRoutes } from './routes/chat';
 import { compareTestRoutes } from './routes/compareTest';
+import { agentRoutes } from './routes/agent';
 import { pool } from './db/client';
 import { redis, redisPub } from './queue/redis';
 import { ensureGroups } from './queue/streams';
 import { initWebSocketServer } from './ws/server';
+import { initAgentWebSocketServer } from './ws/agent';
 import { startIntentWorker } from './queue/workers/intentWorker';
 import { startKernelWorker } from './queue/workers/kernelWorker';
 import { startReplyWorker } from './queue/workers/replyWorker';
@@ -35,6 +37,7 @@ async function main() {
     origin: [
       'http://localhost:5173',  // admin frontend
       'http://localhost:5174',  // chat frontend
+      'http://localhost:5176',  // agent desk frontend
       'http://localhost:3210',
     ],
   });
@@ -48,6 +51,7 @@ async function main() {
   await app.register(decisionRoutes);
   await app.register(chatRoutes);
   await app.register(compareTestRoutes);
+  await app.register(agentRoutes);
 
   app.addHook('onClose', async () => {
     await pool.end();
@@ -62,6 +66,7 @@ async function main() {
     app.log.info('[Redis] Connected — async queue ready');
 
     initWebSocketServer();
+    initAgentWebSocketServer();
 
     // Start workers (non-blocking background loops)
     startIntentWorker().catch(e => app.log.error(e, '[Worker:intent] fatal'));
@@ -74,7 +79,7 @@ async function main() {
 
   try {
     await app.listen({ port: 3210, host: '0.0.0.0' });
-    app.log.info('LIOS P1 service ready on http://0.0.0.0:3210  WS on :3211');
+    app.log.info('LIOS service ready · API :3210 · chat WS :3211 · agent WS :3212');
   } catch (err) {
     app.log.error(err);
     process.exit(1);

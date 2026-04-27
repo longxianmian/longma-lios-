@@ -1,0 +1,18 @@
+{
+  "id": "S26",
+  "label": "查不到 → 用户补充 shopee：cross_channel_handoff 婉转引导",
+  "turns": [
+    "9989890 想退货",
+    "我是在 shopee 买的"
+  ],
+  "expected_verdicts": [0, 0],
+  "max_len_per_turn": 200,
+  "extra_checks": [
+    "turn2_extracted_order_source_is_shopee",
+    "turn2_scope_includes_cross_channel_handoff"
+  ],
+  "must_not_match_per_turn": {
+    "1": [],
+    "2": ["不屬本店", "非本店", "不是.*本店"]
+  }
+}

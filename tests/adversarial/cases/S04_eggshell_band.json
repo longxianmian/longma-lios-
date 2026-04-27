@@ -1,0 +1,7 @@
+{
+  "id": "S4",
+  "label": "澄清·蛋仔手环（接受 0+clarify 或 -1+引导 X9 两种合理路径）",
+  "turns": ["蛋仔手环不好用"],
+  "max_len_per_turn": 100,
+  "must_have_any": ["X9|龍碼Pro|是否指|是否是|是不是|蛋仔"]
+}

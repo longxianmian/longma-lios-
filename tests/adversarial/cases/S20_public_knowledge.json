@@ -1,0 +1,14 @@
+{
+  "id": "S20",
+  "label": "公开常识·提到外送平台不算编造",
+  "turns": [
+    "你们能不能帮我用 foodpanda 订餐？"
+  ],
+  "expected_verdicts": [
+    -1
+  ],
+  "max_len_per_turn": 80,
+  "must_have_any": [
+    "無法|不在|不提供|外送|平台|抱歉|範圍"
+  ]
+}

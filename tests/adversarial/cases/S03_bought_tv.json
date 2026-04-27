@@ -1,0 +1,10 @@
+{
+  "id": "S3",
+  "label": "核验·买过电视机",
+  "turns": ["我买过你们的电视机"],
+  "expected_verdicts": [0],
+  "expected_scope_contains_any": ["purchase_proof", "product_name_clarify"],
+  "max_len_per_turn": 80,
+  "must_have_any": ["訂單編號|購買截圖|本店|核對|核驗"],
+  "must_not_match": ["為了協助您處理|為您安排|我來幫您處理"]
+}

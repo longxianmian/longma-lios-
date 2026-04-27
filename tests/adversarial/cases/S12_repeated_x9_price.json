@@ -1,0 +1,9 @@
+{
+  "id": "S12",
+  "label": "重复同意图·X9 价格 3 轮",
+  "turns": ["X9 多少钱", "那 X9 现在啥价格", "X9 售价是多少呀"],
+  "expected_verdicts": [1, 1, 1],
+  "max_len_per_turn": 100,
+  "must_have_any_per_turn": ["4,990|4990"],
+  "extra_checks": ["len_non_increasing_after_2nd", "no_full_x9_intro_after_2nd"]
+}

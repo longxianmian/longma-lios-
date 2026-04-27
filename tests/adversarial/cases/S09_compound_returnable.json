@@ -1,0 +1,20 @@
+{
+  "id": "S9",
+  "label": "复合主张·退货+大鹅羽绒服+残次品",
+  "turns": ["我想退货，我买的大鹅羽绒服是残次品"],
+  "expected_verdicts": [0],
+  "expected_scope_min_size": 2,
+  "expected_scope_contains_any": ["product_name_clarify", "purchase_proof"],
+  "max_len_per_turn": 50,
+  "must_have_any": ["本店|本公司|是否|確認|核對|銷售"],
+  "must_not_match": [
+    "為了協助您處理退貨",
+    "為了幫您辦理",
+    "為您安排.*退",
+    "我來幫您處理退",
+    "幫您辦理退",
+    "請提供.*訂單.*以便.*處理.*退",
+    "請提供.*訂單.*以便.*辦理"
+  ],
+  "extra_checks": ["single_question_per_turn"]
+}

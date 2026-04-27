@@ -1,6 +1,6 @@
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 
-function makeClient(opts: ConstructorParameters<typeof Redis>[0] = {}): Redis {
+function makeClient(opts: Partial<RedisOptions> = {}): Redis {
   return new Redis({
     host: process.env.REDIS_HOST ?? '127.0.0.1',
     port: parseInt(process.env.REDIS_PORT ?? '6379', 10),

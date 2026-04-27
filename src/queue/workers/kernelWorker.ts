@@ -152,6 +152,8 @@ async function processKernel(fields: Record<string, string>): Promise<void> {
     final_verdict,
     hallucination_guard: String(hallucination_guard),
     candidate_score,
+    kernel_reason:       kernelResult.reason,
+    evidence_total:      String(evidenceRows.length),
   });
 }
 

@@ -1,0 +1,10 @@
+{
+  "id": "S23",
+  "label": "escalation 后用户再发消息：守卫拦截固定话术",
+  "preconditions": ["mark_escalated"],
+  "turns": ["你好我还想问个事"],
+  "max_len_per_turn": 60,
+  "must_have_any": ["處理中|稍候|人工客服"],
+  "must_not_match": ["請提供|您的訂單"],
+  "extra_checks": ["pipeline_guard_is_escalation_in_progress"]
+}

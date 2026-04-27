@@ -1,0 +1,22 @@
+{
+  "id": "S22",
+  "label": "scope 扩展拦截·X9 防水多少米",
+  "turns": [
+    "X9 防水多少米？"
+  ],
+  "expected_verdicts": [
+    1
+  ],
+  "expected_scope_contains_any": [
+    "X9"
+  ],
+  "max_len_per_turn": 120,
+  "must_have_any": [
+    "50\\s*米|IP68"
+  ],
+  "must_not_match": [
+    "智能手機",
+    "我們也提供.*手機|我們也賣",
+    "市面上的"
+  ]
+}

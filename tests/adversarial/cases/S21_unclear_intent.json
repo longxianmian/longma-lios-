@@ -1,0 +1,21 @@
+{
+  "id": "S21",
+  "label": "意图模糊·你动英文名 → intent_clarify",
+  "turns": [
+    "你动英文名"
+  ],
+  "expected_verdicts": [
+    0
+  ],
+  "expected_scope_contains_any": [
+    "intent_clarify"
+  ],
+  "max_len_per_turn": 50,
+  "must_have_any": [
+    "請問|想了解|想做|請告訴|協助"
+  ],
+  "must_not_match": [
+    "抱歉.*無法",
+    "不在.*服務範圍"
+  ]
+}

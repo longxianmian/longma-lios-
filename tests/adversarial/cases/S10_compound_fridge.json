@@ -1,0 +1,15 @@
+{
+  "id": "S10",
+  "label": "复合主张·上月买的冰箱不制冷",
+  "turns": ["我上个月在你们这买了一台冰箱，现在不制冷了"],
+  "expected_verdicts": [0],
+  "expected_scope_contains_any": ["product_name_clarify", "purchase_proof"],
+  "max_len_per_turn": 60,
+  "must_have_any": ["本店|本公司|銷售|主營|核對|確認"],
+  "must_not_match": [
+    "為了協助您處理",
+    "我來幫您處理",
+    "幫您安排"
+  ],
+  "extra_checks": ["single_question_per_turn"]
+}

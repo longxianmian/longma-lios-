@@ -1,0 +1,9 @@
+{
+  "id": "S2",
+  "label": "闲聊·曼谷下雪了好棒",
+  "turns": ["曼谷下雪了好棒"],
+  "expected_verdicts": [-1],
+  "max_len_per_turn": 60,
+  "must_not_match": ["真的耶|是的|好棒喔"],
+  "must_have_any": ["業務|產品|服務|協助"]
+}

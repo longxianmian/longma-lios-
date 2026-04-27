@@ -1,0 +1,14 @@
+{
+  "id": "S24",
+  "label": "escalation 后连点「联系人工客服」3 次：第 1 次写库 / 2&3 守卫拦",
+  "turns": [
+    "我要找人工客服，订单 100001 商品坏了",
+    "聯繫人工客服",
+    "聯繫人工客服"
+  ],
+  "max_len_per_turn": 100,
+  "extra_checks": [
+    "turn1_creates_or_keeps_escalated_state",
+    "turn2_and_3_blocked_by_guard"
+  ]
+}

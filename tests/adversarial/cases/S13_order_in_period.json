@@ -1,0 +1,17 @@
+{
+  "id": "S13",
+  "label": "订单核验·100001 仍可退 → +1",
+  "turns": ["我想退貨，訂單號 100001"],
+  "expected_verdicts": [1],
+  "expected_scope_contains_any": ["order:100001"],
+  "max_len_per_turn": 200,
+  "must_have_any": ["X9|龍碼Pro|4,990|4990|退貨原因|退货原因"],
+  "must_not_match": [
+    "查無此訂單"
+  ],
+  "extra_checks": [
+    "ledger_extracted_identifiers_has_order_100001",
+    "ledger_verifications_classification_exists_belongs_in_period",
+    "ledger_second_pass_verdict_is_1"
+  ]
+}

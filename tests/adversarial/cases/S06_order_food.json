@@ -1,0 +1,8 @@
+{
+  "id": "S6",
+  "label": "外部服务·订餐",
+  "turns": ["帮我订餐"],
+  "expected_verdicts": [-1],
+  "max_len_per_turn": 60,
+  "must_have_any": ["無法|不在|外送|平台|範圍|業務|抱歉|協助|專注|產品|服務|詢問"]
+}

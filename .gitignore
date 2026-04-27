@@ -9,3 +9,6 @@ web/node_modules/
 web/dist/
 web/.env
 web/.env.*
+
+# macOS
+.DS_Store

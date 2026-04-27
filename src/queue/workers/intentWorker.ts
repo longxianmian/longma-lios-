@@ -43,11 +43,11 @@ async function processIntent(fields: Record<string, string>): Promise<void> {
   pushProgress(trace_id, 'searching_kb', { kb_count: kbAssets.length });
 
   const kbContext = kbAssets.length > 0
-    ? `企業知識庫（已按相關性排序）：\n${kbAssets.map(a => `【${a.name}】\n${a.content.slice(0, 500)}`).join('\n\n')}`
+    ? `企業內部資料（已按相關性排序）：\n${kbAssets.map(a => `【${a.name}】\n${a.content.slice(0, 500)}`).join('\n\n')}`
     : '';
 
   // ── LLM intent analysis ────────────────────────────────────────────────────
-  const analysis = await analyzeIntent(user_message, kbContext);
+  const analysis = await analyzeIntent(user_message, kbContext, { trace_id, tenant_id });
 
   const candidateScore = analysis.out_of_scope
     ? 0.10

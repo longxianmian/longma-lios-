@@ -1,110 +1,167 @@
 import OpenAI from 'openai';
+import { query } from '../db/client';
+import { sanitizeReply } from './replyTemplates';
+import { ConversationTurn } from './conversationHistory';
+import { BusinessFlow } from './businessFlows';
+import { ConversationState } from './conversationState';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// ── LLMAnalysis（保留 — 旧 Kernel 仍用 confidence/out_of_scope；上下文感知字段保留以兼容） ──
 export interface LLMAnalysis {
-  intent_type:    string;
-  intent_summary: string;
-  confidence:     number;
-  out_of_scope:   boolean;
+  intent_type:         string;
+  intent_summary:      string;
+  confidence:          number;
+  out_of_scope:        boolean;
+  intent_continuation: boolean;
+  slot_filled:         Record<string, string>;
+  new_intent_flow:     string | null;
+  abandoned:           boolean;
 }
 
-export async function analyzeIntent(message: string, kbContext: string): Promise<LLMAnalysis> {
-  const systemPrompt = `你是專業電商客服AI。根據下方知識庫判斷用戶問題的意圖與可回答性。
+async function recordLLMCall(opts: {
+  trace_id?:  string;
+  tenant_id?: string;
+  call_type:  string;
+  tokens_input?:  number;
+  tokens_output?: number;
+  latency_ms:  number;
+}): Promise<void> {
+  await query(
+    `INSERT INTO lios_llm_calls
+       (trace_id, tenant_id, provider, model, call_type, tokens_input, tokens_output, latency_ms)
+     VALUES ($1::uuid, $2, 'openai', 'gpt-4o-mini', $3, $4, $5, $6)`,
+    [opts.trace_id ?? null, opts.tenant_id ?? null, opts.call_type,
+     opts.tokens_input ?? null, opts.tokens_output ?? null, opts.latency_ms],
+  ).catch(() => {});
+}
 
-${kbContext || '（知識庫目前為空）'}
+const GLOBAL_TAIL_FOR_ANALYZER = `
 
-返回 JSON（不要有任何其他文字）：
+【禁詞】嚴禁出現：知識庫、知识库、資料庫、资料库、KB、系統、系统、LIOS、AI、人工智慧、人工智能、模型、prompt、匹配、索引、embedding。`;
+
+// ── analyzeIntent：保留以兼容旧 Kernel/decisionRuntime 链路 ──────────
+export interface AnalyzeContext {
+  flows?:   BusinessFlow[];
+  state?:   ConversationState | null;
+  history?: ConversationTurn[];
+}
+
+export async function analyzeIntent(
+  message:   string,
+  kbContext: string,
+  meta?: { trace_id?: string; tenant_id?: string },
+  _ctx:  AnalyzeContext = {},
+): Promise<LLMAnalysis> {
+  const systemPrompt = `你是專業客服意圖分析器，輸出嚴格 JSON。
+
+【可用內部資料】
+${kbContext || '（空）'}
+
+返回 JSON：
 {
   "intent_type": "product_inquiry|order_inquiry|return_request|price_inquiry|greeting|complaint|other",
   "intent_summary": "一句話描述用戶意圖",
-  "confidence": 0.87,
-  "out_of_scope": false
+  "confidence": 0.0~1.0,
+  "out_of_scope": bool
 }
 
-confidence 評分規則：
-- 0.85-1.00：知識庫有明確直接答案
-- 0.50-0.85：問題合理但需要更多資訊（例如訂單號）或知識庫只有部分相關內容
-- 0.00-0.50：問題超出業務範圍或完全無法回答
-out_of_scope = true：問題與電商業務完全無關（股市、天氣、政治等）`;
+confidence：
+- 0.85-1.00：資料中有明確直接答案
+- 0.50-0.85：合理但需要更多資訊
+- 0.00-0.50：超出業務範圍` + GLOBAL_TAIL_FOR_ANALYZER;
 
+  const t0 = Date.now();
   const completion = await openai.chat.completions.create({
     model:           'gpt-4o-mini',
     messages:        [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
     response_format: { type: 'json_object' },
     max_tokens:      200,
-    temperature:     0.2,
+    temperature:     0,
+  });
+  await recordLLMCall({
+    trace_id: meta?.trace_id, tenant_id: meta?.tenant_id,
+    call_type: 'analyze_intent',
+    tokens_input:  completion.usage?.prompt_tokens,
+    tokens_output: completion.usage?.completion_tokens,
+    latency_ms: Date.now() - t0,
   });
 
   const raw    = completion.choices[0]?.message?.content ?? '{}';
-  const parsed = JSON.parse(raw) as Partial<LLMAnalysis>;
+  let parsed: Partial<LLMAnalysis> = {};
+  try { parsed = JSON.parse(raw) as Partial<LLMAnalysis>; } catch { /* best-effort */ }
 
   return {
-    intent_type:    parsed.intent_type    ?? 'other',
-    intent_summary: parsed.intent_summary ?? message.slice(0, 80),
-    confidence:     typeof parsed.confidence === 'number'
-                      ? Math.max(0, Math.min(1, parsed.confidence)) : 0.5,
-    out_of_scope:   parsed.out_of_scope === true,
+    intent_type:         parsed.intent_type    ?? 'other',
+    intent_summary:      parsed.intent_summary ?? message.slice(0, 80),
+    confidence:          typeof parsed.confidence === 'number'
+                            ? Math.max(0, Math.min(1, parsed.confidence)) : 0.5,
+    out_of_scope:        parsed.out_of_scope === true,
+    intent_continuation: false,
+    slot_filled:         {},
+    new_intent_flow:     null,
+    abandoned:           false,
   };
 }
 
-export async function generateGroundedReply(message: string, kbContext: string): Promise<string> {
-  const systemPrompt = `你是企業專屬智能客服，只能根據以下知識庫內容回答用戶問題。
-
-=== 知識庫內容 ===
-${kbContext}
-=== 知識庫結束 ===
-
-硬性約束：
-- 你只能使用知識庫中明確記載的資訊作答，禁止推測或補充。
-- 如果知識庫內容與用戶問題無關，你必須回覆：「我目前沒有關於這個問題的資料，請聯繫人工客服（LINE：@lios-support）。」
-- 不允許補充任何知識庫以外的資訊。
-- 回覆請使用繁體中文，語氣專業友善，不超過 150 字。`;
-
-  const completion = await openai.chat.completions.create({
-    model:       'gpt-4o-mini',
-    messages:    [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }],
-    max_tokens:  300,
-    temperature: 0.2,
-  });
-
-  return completion.choices[0]?.message?.content?.trim()
-    ?? '我目前沒有關於這個問題的資料，請聯繫人工客服（LINE：@lios-support）。';
+// ── 统一回复生成器 ────────────────────────────────────────────────────
+//   只负责"出一个候选"。事实校验 / Kernel 裁决 / 重试 都由调用方协调。
+export interface GenerateReplyInput {
+  systemPrompt: string;
+  history:      ConversationTurn[];
+  userMessage:  string;
+  traceId?:     string;
+  tenantId?:    string;
 }
 
-export async function generateFallbackReply(
-  message:  string,
-  verdict:  'hold' | 'reject',
-  analysis: LLMAnalysis,
-): Promise<string> {
-  const systemPrompt = verdict === 'hold'
-    ? `你是電商客服助理。用戶問題資訊不足，請用繁體中文友善地追問。不超過80字。`
-    : `你是電商客服助理。這個問題超出服務範圍，請用繁體中文禮貌說明無法回答，並建議聯繫人工客服（LINE：@lios-support，週一至週五 09:00-18:00）。不超過80字。`;
-
-  const userContent = verdict === 'hold'
-    ? `用戶問題：${message}\n意圖：${analysis.intent_summary}`
-    : `用戶問題：${message}`;
-
-  const completion = await openai.chat.completions.create({
-    model:       'gpt-4o-mini',
-    messages:    [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }],
-    max_tokens:  200,
-    temperature: 0.4,
-  });
-
-  return completion.choices[0]?.message?.content?.trim()
-    ?? (verdict === 'hold'
-      ? '請提供更多詳細資訊，以便我為您服務。'
-      : '暫時無法回答，建議聯繫人工客服（LINE：@lios-support）。');
+export interface GenerateReplyOutput {
+  reply:     string;          // 已经过 sanitizeReply
+  raw:       string;          // LLM 原始输出
+  tokens_input?:  number;
+  tokens_output?: number;
+  latency_ms:     number;
 }
 
-export function buildQuickReplies(intentType: string): string[] {
-  switch (intentType) {
-    case 'order_inquiry':   return ['提供訂單編號', '查看物流狀態', '聯繫人工客服'];
-    case 'return_request':  return ['商品有損壞', '收到錯誤商品', '聯繫人工客服'];
-    case 'price_inquiry':   return ['聯繫銷售', '了解方案', '人工客服'];
-    case 'product_inquiry': return ['查看更多商品', '退換貨政策', '聯繫人工客服'];
-    case 'complaint':       return ['聯繫人工客服', '提交工單'];
-    default:                return ['查詢訂單狀態', '退換貨申請', '商品詳情諮詢', '人工客服'];
+export async function generateReply(input: GenerateReplyInput): Promise<GenerateReplyOutput> {
+  // 把 history 摆成 OpenAI chat messages，最后一条是当前 userMessage
+  const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+    { role: 'system', content: input.systemPrompt },
+  ];
+  for (const t of input.history) {
+    messages.push({
+      role:    t.role === 'user' ? 'user' : 'assistant',
+      content: t.content,
+    });
   }
+  messages.push({ role: 'user', content: input.userMessage });
+
+  const t0 = Date.now();
+  const completion = await openai.chat.completions.create({
+    model:       'gpt-4o-mini',
+    messages,
+    max_tokens:  300,
+    temperature: 0,
+  });
+  const latency_ms = Date.now() - t0;
+
+  await recordLLMCall({
+    trace_id: input.traceId, tenant_id: input.tenantId,
+    call_type: 'reply',
+    tokens_input:  completion.usage?.prompt_tokens,
+    tokens_output: completion.usage?.completion_tokens,
+    latency_ms,
+  });
+
+  const raw = (completion.choices[0]?.message?.content ?? '').trim();
+  return {
+    reply: sanitizeReply(raw),
+    raw,
+    tokens_input:  completion.usage?.prompt_tokens,
+    tokens_output: completion.usage?.completion_tokens,
+    latency_ms,
+  };
+}
+
+export function buildQuickReplies(_intentType: string): string[] {
+  return ['提供更多資訊', '聯繫人工客服', '換一個問題'];
 }

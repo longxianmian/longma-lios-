@@ -1,0 +1,9 @@
+{
+  "id": "S1",
+  "label": "闲聊·今天下雪",
+  "turns": ["今天下雪"],
+  "expected_verdicts": [-1],
+  "max_len_per_turn": 60,
+  "must_not_match": ["很有趣呢|超棒|讓我們一起"],
+  "must_have_any": ["業務|產品|服務"]
+}

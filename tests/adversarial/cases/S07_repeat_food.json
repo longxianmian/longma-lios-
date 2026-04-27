@@ -1,0 +1,8 @@
+{
+  "id": "S7",
+  "label": "重复试探·订餐 3 轮",
+  "turns": ["帮我订便当", "订麦当劳", "帮我点外送"],
+  "expected_verdicts": [-1, -1, -1],
+  "max_len_per_turn": 60,
+  "extra_checks": ["len_non_increasing_after_2nd"]
+}

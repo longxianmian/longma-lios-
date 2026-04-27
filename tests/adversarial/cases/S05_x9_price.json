@@ -1,0 +1,9 @@
+{
+  "id": "S5",
+  "label": "KB·X9 多少钱",
+  "turns": ["X9 多少钱"],
+  "expected_verdicts": [1],
+  "expected_scope_contains_any": ["X9"],
+  "max_len_per_turn": 120,
+  "must_have_any": ["4,990|4990"]
+}

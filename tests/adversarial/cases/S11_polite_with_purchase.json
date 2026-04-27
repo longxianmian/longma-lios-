@@ -1,0 +1,15 @@
+{
+  "id": "S11",
+  "label": "礼貌夹带·之前买的 X9 怎么升级",
+  "turns": ["你好，请问我之前买的 X9 怎么升级固件？"],
+  "expected_verdicts": [0],
+  "expected_scope_contains_any": ["purchase_proof"],
+  "max_len_per_turn": 80,
+  "must_have_any": ["訂單|購買|本店|確認|核對|請問|是否|具體問題"],
+  "must_not_match": [
+    "升級.*步驟",
+    "請依下列步驟",
+    "首先.*接下來",
+    "為了協助您升級"
+  ]
+}

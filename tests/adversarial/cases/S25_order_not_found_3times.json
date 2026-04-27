@@ -1,0 +1,14 @@
+{
+  "id": "S25",
+  "label": "同一订单号 not_found 3 次：第 3 次自动 escalation_intake",
+  "turns": [
+    "我的订单 9989890 想退货",
+    "9989890",
+    "9989890"
+  ],
+  "expected_verdicts": [0, 0, 0],
+  "max_len_per_turn": 200,
+  "extra_checks": [
+    "turn3_scope_includes_order_lookup_failed_or_escalation_intake"
+  ]
+}

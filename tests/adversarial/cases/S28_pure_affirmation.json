@@ -1,0 +1,14 @@
+{
+  "id": "S28",
+  "label": "回「正确」指代上轮订单号：不当新主张，按 not_found 重试推进",
+  "turns": [
+    "9989890 想退货",
+    "正确",
+    "正确的"
+  ],
+  "max_len_per_turn": 200,
+  "extra_checks": [
+    "turn2_or_3_is_pure_affirmation_recognized",
+    "turn3_does_not_just_repeat_same_question"
+  ]
+}
