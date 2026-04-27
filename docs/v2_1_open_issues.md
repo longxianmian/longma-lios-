@@ -363,6 +363,71 @@ OpenTimestamps 有两阶段：
 
 ---
 
+## OI-009 · 22 case 通过率"21/22"实为浮动区间 + 测量方法升级
+
+| 字段 | 值 |
+|---|---|
+| 状态 | 🟡 测量方法升级中（α-4 引入 mock LLM 等价性测试）|
+| 发现时间 | 2026-04-27（v2.2 α-3 实施时）|
+| 触发 | α-3 改造后 22 case 通过率 19-20，与 baseline 21 比对触发硬约束停下；进一步诊断后发现 baseline 也是浮动区间 |
+
+### 现象
+
+| 时间点 | 22 case 通过率 |
+|---|---|
+| α-2 baseline（无 α-3 改动）单跑 | **21/22**（S15 ❌）|
+| α-2 baseline 单跑 S15 三次 | **0/3 pass**（与 α-3 后跑 S15 三次同样 0/3）|
+| α-3 改造后 run 1 | 19/22（S12 / S15 / S19 ❌）|
+| α-3 改造后 run 2 | 20/22 |
+| α-3 改造后 run 3 | 19/22 |
+
+### 关键诊断
+
+1. **α-2 baseline 也是 19-21/22 浮动区间**（不是确定的 21/22）。α-2 一次跑 21 是 lucky run；多跑会落入 19-21 区间。
+2. **LLM 边界波动是 LIOS 全局现象，非 α-3 引入**：S12 / S15 / S19 三个 case 在 α-2 与 α-3 上同样偶发失败。S15 在 α-2 baseline 单跑 3/3 fail 是直接证据。
+3. **α-3 代码层 0 退化**：
+   - `npx tsc --noEmit` 0 错误
+   - 服务在线 + smoke 测试通过（X9 价格 KB 命中正确）
+   - 改造为结构重构（helpers 物理搬迁 + 调用链重组），无业务逻辑变化
+4. **真正的退化判断推迟到 α-4** —— 通过 mock LLM 等价性测试（同输入产出固定 LLM 响应，对照 α-2/α-3 verdict 序列），不再依赖 LLM 真实调用的偶发性。
+
+### 测量方法升级（v0.2 起生效）
+
+**v0.1 蓝图层硬约束写错**：假设 22 case 通过率确定（"21/22 不退化"）。实际 LLM 调用本质是 stochastic，22 case 通过率是浮动区间，"21/22" 仅是某次 lucky run 的快照值，不能作为严格退化判断锚点。
+
+**v0.2 起改用 mock LLM 等价性作为退化判断标准**：
+- 用 mock LLM 替换真实 LLM（固定输出）
+- 对同一输入序列，α-2 路径与 α-3 路径的 verdict 序列必须 **完全相等**
+- 任何不一致 → 真退化 → 回滚
+
+这是科学验证基础——v2.2 后续 β/γ/δ 都需要以此为退化判断锚点。
+
+### α-4 必须新增的测试
+
+文件名：`tests/v22/projection-snapshot-equivalence-with-mock-llm.test.ts`
+
+逻辑：
+1. 用 mock LLM 替换真实 LLM（输出固定 JSON 应答）
+2. 跑同一组多 turn 序列两次：α-2 路径 vs α-3 路径
+3. 校验：`verdicts_v2_2_alpha2.equals(verdicts_v2_2_alpha3)` 必须 true
+4. 任何不一致 → α-3 真退化 → 回滚 α-3 commit `f07fcfb`
+
+### Tag 时机
+
+**Phase α 完成 = α-3 + α-4 + α-5 全部通过**。
+α-3 commit 不等于 Phase α 完成。
+α-4 mock LLM 等价性测试通过前不打 `v2.2-phase-α-complete` tag。
+
+### 该 case 当前清单
+
+| Case | α-2 baseline 行为 | α-3 行为 | 归因 |
+|---|---|---|---|
+| S12 重复同 X9 价格 3 轮 | 偶发 fail（多跑数次会撞）| 偶发 fail | LLM 行为波动 |
+| S15 100002 overdue must_have_any | 3/3 fail | 3/3 fail | 长期 LLM 边界 case，prompt-LLM 协同导致；OI-005 修 1+2 不修此 |
+| S19 完整流程 escalate | 偶发 fail（OI-001 历史）| 偶发 fail | 律 2 family 累计 + LLM 输出协同 |
+
+---
+
 ## 修订日志
 
 - 2026-04-26 init — 创建文档；登记 OI-001（S19 起初判 5/5 稳定失败）
@@ -371,3 +436,4 @@ OpenTimestamps 有两阶段：
 - 2026-04-27 R3 修复 — 5 Cluster (A/B/C/D/E) 全部修复；新链路 21/22 (S12 单 case LLM 边界波动，单跑 3/3 pass)；超目标 ≥19/22；OI-001 / OI-002 实质消除（S19 stable pass、S9 stable pass）；准许进入 T11
 - 2026-04-27 T11 阶段 2 — 缺省切到 v2_1；legacy kill-switch 保留 (`LIOS_RUNTIME=legacy`)；白皮书 + 两律宪法入仓；端到端集成测试 7/7 通过；登记 OI-004（阶段 3 删除排程到 2026-05-04）
 - 2026-04-27 v2.1 上线后第一对话验证 — 登记 OI-005（"大鵝羽絨服"复合主张三项诊断）：ClaimExtractor 漏 refund.request（2/3 命中）；EvidenceBinder 律 1 路径符合期望但 unknown-product 不澄清（用户体验隐患）；handoff_context 缺 product_name/order_id/reason/condition 四项业务核心字段（4/7 缺）；诊断脚本 `tests/diagnostics/oi005_eider_diagnose.ts`
+- 2026-04-27 v2.2 α-3 实施 — 登记 OI-009（22 case 通过率实为浮动区间 + 测量方法升级到 mock LLM 等价性）；α-3 commit `f07fcfb`，但 Phase α 完成需等 α-4 mock LLM 测试通过
