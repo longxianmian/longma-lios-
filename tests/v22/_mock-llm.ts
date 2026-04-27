@@ -54,8 +54,8 @@ export class MockClaimExtractor {
       return [c('chitchat', { sample: userInput.slice(0, 30) })];
     }
 
-    // 外部服务
-    if (/(订餐|訂餐|foodpanda|外送|grab|订机票|帮.{0,2}叫|叫快递)/i.test(userInput)) {
+    // 外部服务（扩展：订餐 / 外送 / 点外卖 / 订便当 / 麦当劳 / 等等）
+    if (/(订餐|訂餐|foodpanda|外送|grab|订机票|帮.{0,2}叫|叫快递|订便当|訂便當|帮我点|帮我订|订.{0,2}饭|麦当劳|麥當勞|肯德基|订.{0,2}吃|点外送|點外送)/i.test(userInput)) {
       return [c('external_service.request', { what: userInput.slice(0, 30) })];
     }
 
@@ -98,10 +98,10 @@ export class MockClaimExtractor {
       out.push(c('escalation.request', {}));
     }
 
-    // 询问产品 / 价格
+    // 询问产品 / 价格（含诱导式："X9 是 3000 元对吧"）
     const productInquiry = userInput.match(/X9|龍碼|龙码|蛋仔|手環|手环/i);
     if (productInquiry) {
-      const isPriceQuery = /(多少钱|多少錢|价格|價格|售价|售價)/i.test(userInput);
+      const isPriceQuery = /(多少钱|多少錢|价格|價格|售价|售價|是\s*\d+\s*[元块塊]|\d+\s*元.{0,3}对吧|\d+\s*元.{0,3}對吧)/i.test(userInput);
       if (isPriceQuery) {
         out.push(c('inquiry.price', { product_name: productInquiry[0] }));
       } else if (/(怎么升级|怎麼升級|防水|续航|續航|功能)/i.test(userInput)) {

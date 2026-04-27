@@ -1,0 +1,18 @@
+
+> longma-lios@1.0.0 benchmark
+> node scripts/benchmark.cjs
+
+benchmark · iterations=3
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[chitchat] 4678ms 2340ms 2999ms 
+[kb_x9_price] 4312ms 3972ms 3949ms 
+[order_404] 4293ms 5349ms 4006ms 
+[compound] 3301ms 3088ms 3238ms 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+avg / min / max (ms):
+  chitchat     avg= 3339  min= 2340  max= 4678
+  kb_x9_price  avg= 4078  min= 3949  max= 4312
+  order_404    avg= 4549  min= 4006  max= 5349
+  compound     avg= 3209  min= 3088  max= 3301
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+overall avg = 3794ms

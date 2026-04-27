@@ -293,13 +293,15 @@ export class LIOSGovernanceService {
     });
 
     return Object.freeze({
-      verdict: decision.verdict,
+      // 注意：返回 augment 后的（decisionForGen）—— 让调用方看到 verifier /
+      // unknown-product 增强后的 verdict / bounds，与 generator/auditor 实际用的一致
+      verdict: decisionForGen.verdict,
       verdict_legacy: verdictLegacy,
-      reason: decision.reason,
+      reason: decisionForGen.reason,
       bounds: Object.freeze({
-        must:     [...decision.bounds.must],
-        must_not: [...decision.bounds.must_not],
-        may:      [...decision.bounds.may],
+        must:     [...decisionForGen.bounds.must],
+        must_not: [...decisionForGen.bounds.must_not],
+        may:      [...decisionForGen.bounds.may],
       }),
       reply_draft: audited.final_text,
       should_escalate: !!decision.should_escalate,
@@ -307,10 +309,10 @@ export class LIOSGovernanceService {
       trace_id: traceId,
       pipeline: Object.freeze({
         runtime:           'v2_1',
-        kernel_verdict:    decision.verdict,
-        kernel_reason:     decision.reason,
-        bounds_must:       [...decision.bounds.must],
-        bounds_must_not:   [...decision.bounds.must_not],
+        kernel_verdict:    decisionForGen.verdict,
+        kernel_reason:     decisionForGen.reason,
+        bounds_must:       [...decisionForGen.bounds.must],
+        bounds_must_not:   [...decisionForGen.bounds.must_not],
         claims_extracted:  claims.map(c => c.type),
         evidence_levels:   evidencePack.bindings.map(b => b.evidence_level),
         verifier_class:    verifierInfo?.classification ?? null,

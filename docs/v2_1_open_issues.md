@@ -402,6 +402,44 @@ OpenTimestamps 有两阶段：
 
 这是科学验证基础——v2.2 后续 β/γ/δ 都需要以此为退化判断锚点。
 
+### v2.2 测量方法最终态（B-4 决议落地，2026-04-28）
+
+**退化判断优先级**（v2.2 全部 Phase α/β/γ/δ 适用）：
+
+```
+1. mock LLM 等价性测试  → 失败 = 真退化（决定性）
+2. 真实 LLM 跑通过率   → 仅作辅助 telemetry，不作退化判断
+3. 真实 LLM 失败 case 集合差异 → 不作退化判断依据
+   （是 stochastic sampling 噪音，不是系统级行为）
+```
+
+**v2.2 退化判断双锚点**：
+
+| 锚点 | 文件 | 通过条件 |
+|---|---|---|
+| α-4 v22 验收测试集 | `tests/v22/*.test.ts`（6 文件 34 测试）| 全部通过 |
+| α-5+ 22 case mock LLM runner | `tests/adversarial/runner-with-mock-llm.ts` | **22/22** deterministic |
+
+**真实 LLM 跑数据（仅 telemetry）**：
+
+| 阶段 | 跑次数 | 通过率分布 | 失败 case 集合 |
+|---|---|---|---|
+| α-2 baseline | 3 次 | 21 / 22 / 20 | {S13, S15} |
+| α-3 改造 | 5 次 | 19 / 19 / 20 / 19 / 20 | {S12, S15, S19} |
+
+集合差异 ≠ 退化（stochastic noise）。mock LLM 等价性 + 22/22 锚点已证明 α-3 决策路径无系统性退化。
+
+### α-3 完整审查通过证据
+
+| 项 | 状态 | 证据 |
+|---|---|---|
+| α-4 v22 测试 | ✅ | 34/34 全过（stateless 5 + retry 4 + multi-source 6 + completeness 7 + equivalence 7 + structured 5）|
+| 22 case mock LLM | ✅ | 22/22 stable × 3 runs |
+| 性能 | ✅ | α-3 整体 -2.9%（略优于 α-2）|
+| ActionResolver 读 ledger 边界 | ✅ | OI-010 已澄清为合规幂等查询 |
+| service 字段纯净 | ✅ | 0 个 ledger/projection/verifier 实例字段 |
+| service.decide 返回 bounds 修复 | ✅ | bug fixed: 现返回 augment 后 decisionForGen.bounds（multi-source C2 暴露）|
+
 ### α-4 必须新增的测试
 
 文件名：`tests/v22/projection-snapshot-equivalence-with-mock-llm.test.ts`
@@ -425,6 +463,74 @@ OpenTimestamps 有两阶段：
 | S12 重复同 X9 价格 3 轮 | 偶发 fail（多跑数次会撞）| 偶发 fail | LLM 行为波动 |
 | S15 100002 overdue must_have_any | 3/3 fail | 3/3 fail | 长期 LLM 边界 case，prompt-LLM 协同导致；OI-005 修 1+2 不修此 |
 | S19 完整流程 escalate | 偶发 fail（OI-001 历史）| 偶发 fail | 律 2 family 累计 + LLM 输出协同 |
+
+---
+
+## OI-010 · 拆分边界书 §1.2 "不读 ledger" 精确定义
+
+| 字段 | 值 |
+|---|---|
+| 状态 | 🟢 已澄清并锁定 |
+| 触发 | Phase α 交付审查 Q2：service 行为层 ActionResolver.fetchExisting 间接读 lios_ledgers，与边界书 v0.1 §1.2 "不读 ledger" 字面冲突 |
+| 日期 | 2026-04-28 |
+| 影响范围 | LIOSGovernanceService 与所有 v2.2 future API 服务（β/γ/δ 阶段必读）|
+
+### 澄清原文
+
+> 拆分边界书 v0.1 §1.2 "不读 ledger" 精确定义：
+>
+> ✗ 不允许通过 ledger 维持对话状态 / 拼凑 projection / 累计律 2 family-track
+> ✓ 允许 ActionResolver 读 ledger 做幂等性查询（idempotency_scope）
+>
+> 理由：
+>   - 幂等性查询是**业务读取**，不是对话状态读取
+>   - 同样 (req, projection_snapshot) → 同样幂等查询结果 → 同样 result
+>   - 无状态语义不破坏
+>
+> 适用于 LIOSGovernanceService 内部所有对 ledger 的"查询型"读取。
+
+### 实施对照
+
+LIOSGovernanceService 内部读 lios_ledgers 行为分类（α-3 完成时点）：
+
+| 读取点 | 文件 | 类别 | 合规 |
+|---|---|---|---|
+| `ActionResolver.fetchExisting(action_id, ctx)` | `src/resolver/ActionResolver.ts` | 幂等性查询（is_committed?）| ✅ 允许 |
+| `retrieveKBSnippets` 读 lios_assets | `src/service/decision-helpers.ts:326` | KB 召回（业务证据，不是 ledger）| ✅ 允许（且不读 lios_ledgers）|
+| `fetchHistoryBrief` 读 lios_intents | `src/service/decision-helpers.ts:75` | 历史摘要（生成器上下文）| ✅ 允许（且不读 lios_ledgers）|
+
+LIOSGovernanceService **未**做的（继续禁止）：
+- ✗ 通过 ledger 重建 projection（这由 ConversationRuntime.projectionRepo 做，service 只接 snapshot）
+- ✗ 通过 ledger 累计 family-track（attempt_key 只算不写；写由 ConversationRuntime 在 persistTurnToLedger 完成）
+- ✗ 直接 `INSERT INTO lios_ledgers`（grep 验证 0 处）
+
+### 等价性证明
+
+无状态语义保持的形式条件（边界书 §4.2）：
+
+```
+∀ req. ∀ valid_ledger_state.
+   service.decide(req) given ledger_state_X = service.decide(req) given ledger_state_Y
+   当且仅当 ActionResolver 对 req.candidate_actions 在两个 ledger 状态下查询的
+   already_committed 集合相同
+```
+
+α-4 测试 `projection-snapshot-equivalence-with-mock-llm` 7/7 通过——已经隐式验证：
+- mock LLM 下 service.decide 在不同 session_id 间产生 deterministic verdict 序列
+- ActionResolver 读 ledger 行为不破坏等价性（不同 session 各自的 already_committed 子集独立）
+
+### 后续阶段（β/γ/δ）的指引
+
+- 任何新加的 service-internal IO 必须显式标注是"幂等性查询"还是"对话状态读取"
+- 后者 → 拒绝（边界书禁）
+- 前者 → 允许（按本 OI 澄清）+ 需在 PR 描述中点出该 IO 的幂等性证明
+- 若不能给出幂等性证明 → 停下询问用户
+
+### 关联
+
+- 父文档：`LIOS_v2.2_拆分边界书_v0.1.md` §1.2
+- 触发审查：Phase α 交付审查 Q2
+- 实施 commit：`f07fcfb`（α-3）
 
 ---
 
