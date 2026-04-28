@@ -18,6 +18,8 @@
     "migrate:v9:down": "tsx src/db/migrate_v9_down.ts",
     "migrate:v10": "tsx src/db/migrate_v10.ts",
     "migrate:v10:down": "tsx src/db/migrate_v10_down.ts",
+    "migrate:v11": "tsx src/db/migrate_v11.ts",
+    "migrate:v11:down": "tsx src/db/migrate_v11_down.ts",
     "benchmark": "node scripts/benchmark.cjs"
   },
   "dependencies": {
