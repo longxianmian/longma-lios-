@@ -19,12 +19,14 @@
  *   - reply.send 之后异步写 lios_trace_links（fire-and-forget，失败只 warn）
  *   - 不阻塞主流程；写表失败不影响 decide 响应
  */
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { LIOSGovernanceService } from '../service/LIOSGovernanceService';
 import type { DecideRequest } from '../service/types';
 import { APIError, ErrorCodes, toErrorBody } from './errors';
 import { query } from '../db/client';
+import { LIOSAccessControl, InvalidTokenError } from '../access/LIOSAccessControl';
+import type { AccessContext } from '../access/LIOSAccessControl';
 
 // γ-3：mutable export pattern。模块加载时不再 new，由 src/index.ts 启动时
 // createGovernanceServiceFromDB() 工厂建好后通过 setGovernanceService 注入。
@@ -39,6 +41,20 @@ export function getGovernanceService(): LIOSGovernanceService {
     throw new Error('governanceService not initialized — call setGovernanceService() at startup');
   }
   return _governanceService;
+}
+
+// γ-5：accessControl 同款 mutable export pattern。
+let _accessControl: LIOSAccessControl | undefined;
+
+export function setAccessControl(a: LIOSAccessControl): void {
+  _accessControl = a;
+}
+
+export function getAccessControl(): LIOSAccessControl {
+  if (!_accessControl) {
+    throw new Error('accessControl not initialized — call setAccessControl() at startup');
+  }
+  return _accessControl;
 }
 
 export interface TraceLinkPayload {
@@ -106,14 +122,52 @@ export async function governanceRoutes(app: FastifyInstance) {
     });
   });
 
-  app.post<{ Body: Partial<DecideRequest> }>('/lios/runtime/decide', async (request, reply) => {
+  // γ-5: token 验证 preHandler — 在 body 校验之前
+  const verifyTokenPreHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    const traceId = randomUUID();
+    const auth = request.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer ')) {
+      return reply.code(401).send({
+        error: 'E_AUTH_001',
+        message: 'missing_authorization',
+        trace_id: traceId,
+      });
+    }
+    const token = auth.slice(7);
+    try {
+      const ctx = await getAccessControl().verify(token);
+      // 挂到 request 上，handler 可读
+      (request as FastifyRequest & { accessContext?: AccessContext }).accessContext = ctx;
+    } catch (e) {
+      if (e instanceof InvalidTokenError) {
+        return reply.code(401).send({
+          error: 'E_AUTH_002',
+          message: 'invalid_token',
+          trace_id: traceId,
+        });
+      }
+      throw e;
+    }
+  };
+
+  app.post<{ Body: Partial<DecideRequest> }>('/lios/runtime/decide', { preHandler: verifyTokenPreHandler }, async (request, reply) => {
     const traceId = randomUUID();
     const body = request.body ?? {};
+    const ctx = (request as FastifyRequest & { accessContext?: AccessContext }).accessContext;
 
     if (typeof body.tenant_id !== 'string' || body.tenant_id.length === 0) {
       return reply.code(400).send({
         error: ErrorCodes.INVALID_REQUEST,
         message: 'Missing tenant_id',
+        trace_id: traceId,
+      });
+    }
+
+    // γ-5：跨租户校验。body.tenant_id 必须等于 token 绑定的 tenant_id
+    if (ctx && body.tenant_id !== ctx.tenant_id) {
+      return reply.code(403).send({
+        error: 'E_AUTH_003',
+        message: `tenant_mismatch: token bound to '${ctx.tenant_id}' but body.tenant_id='${body.tenant_id}'`,
         trace_id: traceId,
       });
     }

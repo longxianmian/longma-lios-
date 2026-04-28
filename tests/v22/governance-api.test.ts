@@ -21,10 +21,12 @@ import Fastify from 'fastify';
 import {
   governanceRoutes,
   setGovernanceService,
+  setAccessControl,
   __setWriteTraceLinkForTest,
   __resetWriteTraceLink,
   type TraceLinkPayload,
 } from '../../src/api/governance';
+import { LIOSAccessControl, InvalidTokenError, type AccessContext } from '../../src/access/LIOSAccessControl';
 import { createTestService } from './_test-helpers';
 
 // γ-3：governance.ts 已不再 export `governanceService` const。
@@ -32,6 +34,20 @@ import { createTestService } from './_test-helpers';
 // （setGovernanceService → 6 处 monkey-patch / inject 保持不变的最小改造）。
 const governanceService = createTestService();
 setGovernanceService(governanceService);
+
+// γ-5：stub access control（避免测试依赖真实 lios_access_tokens 表数据）。
+// 仅接受 demo 测试 token，其他全部抛 InvalidTokenError。
+class StubAccessControl extends LIOSAccessControl {
+  override async verify(token: string): Promise<AccessContext> {
+    if (token === 'lios_test_token_demo_v22') {
+      return Object.freeze({ tenant_id: 'demo', source_app: 'demo' });
+    }
+    throw new InvalidTokenError();
+  }
+}
+setAccessControl(new StubAccessControl());
+
+const TEST_AUTH = { authorization: 'Bearer lios_test_token_demo_v22' };
 
 // 测试期间默认 writeTraceLink 替换为 noop spy，避免触发真实 DB 写入。
 const writeCalls: TraceLinkPayload[] = [];
@@ -62,6 +78,7 @@ async function run(name: string, fn: () => Promise<void>) {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
       payload: { source_app: 'test', session_id: 's1', user_message: 'hi' },
     });
     assert.equal(res.statusCode, 400, `expected 400, got ${res.statusCode}`);
@@ -75,6 +92,7 @@ async function run(name: string, fn: () => Promise<void>) {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
       payload: {
         tenant_id: 'demo',
         source_app: 'tianwen',
@@ -100,6 +118,7 @@ async function run(name: string, fn: () => Promise<void>) {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
       payload: {
         tenant_id: 'demo',
         source_app: 'test',
@@ -122,6 +141,7 @@ async function run(name: string, fn: () => Promise<void>) {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
       payload: {
         tenant_id: 'demo', source_app: 'test', session_id: 'beta2-t4', user_message: 'X9 多少钱',
       },
@@ -139,6 +159,7 @@ async function run(name: string, fn: () => Promise<void>) {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
       payload: {
         tenant_id: 'demo', source_app: 'test', session_id: 'beta2-t5', user_message: 'X9 多少钱',
       },
@@ -164,6 +185,7 @@ async function run(name: string, fn: () => Promise<void>) {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
       payload: {
         tenant_id: 'demo',
         source_app: 'test',
@@ -196,6 +218,7 @@ async function run(name: string, fn: () => Promise<void>) {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
       payload: {
         tenant_id: 'demo',
         source_app: 'test',

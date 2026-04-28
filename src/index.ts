@@ -12,9 +12,10 @@ import { decisionRoutes } from './routes/decisions';
 import { chatRoutes } from './routes/chat';
 import { compareTestRoutes } from './routes/compareTest';
 import { agentRoutes } from './routes/agent';
-import { governanceRoutes, setGovernanceService } from './api/governance';
+import { governanceRoutes, setGovernanceService, setAccessControl } from './api/governance';
 import { ConversationRuntime, setConversationRuntime } from './runtime/ConversationRuntime';
 import { createGovernanceServiceFromDB } from './service/createGovernanceServiceFromDB';
+import { LIOSAccessControl } from './access/LIOSAccessControl';
 import { pool } from './db/client';
 import { redis, redisPub } from './queue/redis';
 import { ensureGroups } from './queue/streams';
@@ -52,6 +53,8 @@ async function main() {
   setGovernanceService(service);
   const runtime = new ConversationRuntime(service);
   setConversationRuntime(runtime);
+  // γ-5：注入 LIOSAccessControl（API 访问授权层），preHandler 调用其 verify(token)。
+  setAccessControl(new LIOSAccessControl());
 
   await app.register(healthRoutes);
   await app.register(liosRoutes);
