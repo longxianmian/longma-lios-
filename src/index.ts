@@ -12,6 +12,7 @@ import { decisionRoutes } from './routes/decisions';
 import { chatRoutes } from './routes/chat';
 import { compareTestRoutes } from './routes/compareTest';
 import { agentRoutes } from './routes/agent';
+import { governanceRoutes } from './api/governance';
 import { pool } from './db/client';
 import { redis, redisPub } from './queue/redis';
 import { ensureGroups } from './queue/streams';
@@ -52,6 +53,7 @@ async function main() {
   await app.register(chatRoutes);
   await app.register(compareTestRoutes);
   await app.register(agentRoutes);
+  await app.register(governanceRoutes);
 
   app.addHook('onClose', async () => {
     await pool.end();
