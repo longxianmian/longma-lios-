@@ -17,11 +17,16 @@
 
 import { strict as assert } from 'node:assert';
 import { CandidatePackBuilder } from '../../src/builder/CandidatePackBuilder';
-import { ElectricCommercePolicy, HealthcareConsultPolicy, loadTenantPolicy } from '../../src/policy/TenantPolicy';
+import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/TenantPolicy';
+import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
 import { EvidenceBinder } from '../../src/binder/EvidenceBinder';
 import type { Claim } from '../../src/extractor/ClaimExtractor';
 
-const builder = new CandidatePackBuilder();
+// γ-1: builder 改为依赖注入 registry；本测试文件构造与 v2.1 等价的 registry
+const registry = new TenantPolicyRegistry();
+registry.register('demo', ElectricCommercePolicy);
+registry.register('healthcare-demo', HealthcareConsultPolicy);
+const builder = new CandidatePackBuilder(registry);
 const binder = new EvidenceBinder();
 
 function claim(t: Claim['type'], content: Record<string, unknown> = {}, target?: string): Claim {
@@ -145,11 +150,13 @@ function run(name: string, fn: () => void | Promise<void>) {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // C7: loadTenantPolicy 兜底到 default（未注册 tenant 不抛错）
+  // C7: 未注册 tenant → registry.get 抛错（γ-1 决议：不再 fallback default）
   // ───────────────────────────────────────────────────────────────────────────
-  await run('C7 loadTenantPolicy 未注册 tenant → 兜底 default', () => {
-    const p = loadTenantPolicy('non_existent_tenant_xyz');
-    assert.equal(p.industry, 'electric_commerce');
+  await run('C7 未注册 tenant → registry.get 抛错（多租户安全边界）', () => {
+    assert.throws(
+      () => registry.get('non_existent_tenant_xyz'),
+      /not registered: non_existent_tenant_xyz/,
+    );
   });
 
   // ───────────────────────────────────────────────────────────────────────────

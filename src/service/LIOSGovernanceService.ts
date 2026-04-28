@@ -23,6 +23,8 @@ import { EvidenceBinder } from '../binder/EvidenceBinder';
 import type { EvidencePack } from '../binder/EvidenceBinder';
 import { CandidatePackBuilder } from '../builder/CandidatePackBuilder';
 import type { KernelInput } from '../builder/CandidatePackBuilder';
+import { TenantPolicyRegistry } from '../policy/registry/TenantPolicyRegistry';
+import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../policy/TenantPolicy';
 import { LIKernel } from '../kernel/v2_1/LIKernel';
 import type { Decision } from '../kernel/v2_1/LIKernel';
 import { ActionResolver } from '../resolver/ActionResolver';
@@ -73,11 +75,21 @@ export class LIOSGovernanceService {
   // 内置组件均为纯函数 / 自治组件
   private readonly extractor = new ClaimExtractor();
   private readonly binder = new EvidenceBinder();
-  private readonly builder = new CandidatePackBuilder();
+  private readonly registry: TenantPolicyRegistry;
+  private readonly builder: CandidatePackBuilder;
   private readonly kernel = new LIKernel();
   private readonly resolver = new ActionResolver();
   private readonly generator = new BoundedLLMGenerator();
   private readonly auditor = new BoundsAuditor();
+
+  constructor() {
+    // γ-1: 启动时注册默认 policies；γ-2/γ-3 后改为从 DB 加载
+    this.registry = new TenantPolicyRegistry();
+    this.registry.register('demo', ElectricCommercePolicy);
+    this.registry.register('default', ElectricCommercePolicy);
+    this.registry.register('healthcare-demo', HealthcareConsultPolicy);
+    this.builder = new CandidatePackBuilder(this.registry);
+  }
 
   /**
    * 主决策入口。无状态（同 req 同 result，在 LLM 取样温度允许的范围内）。

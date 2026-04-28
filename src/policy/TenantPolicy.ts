@@ -308,16 +308,7 @@ export const HealthcareConsultPolicy: TenantPolicy = Object.freeze({
   out_of_scope_default: 'hold_clarify',     // 医疗咨询里宁可追问也不直接 reject
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Loader（按 tenant_id 加载 policy）
-// ─────────────────────────────────────────────────────────────────────────────
-
-const REGISTRY: Readonly<Record<string, TenantPolicy>> = Object.freeze({
-  demo:             ElectricCommercePolicy,
-  default:          ElectricCommercePolicy,
-  'healthcare-demo': HealthcareConsultPolicy,
-});
-
-export function loadTenantPolicy(tenant_id: string): TenantPolicy {
-  return REGISTRY[tenant_id] ?? REGISTRY.default;
-}
+// γ-1: loadTenantPolicy() + REGISTRY const 已删除。
+// Policy 的注册/查找改由 src/policy/registry/TenantPolicyRegistry 承担，
+// 由 LIOSGovernanceService 在构造时注入并填充默认 policies。
+// γ-2/γ-3 后将改为启动时从 lios_tenants 表加载。

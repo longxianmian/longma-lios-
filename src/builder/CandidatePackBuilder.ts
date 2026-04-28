@@ -17,7 +17,7 @@
 import type { Claim, ClaimType } from '../extractor/ClaimExtractor';
 import type { EvidencePack } from '../binder/EvidenceBinder';
 import type { TenantPolicy, CandidateActionTemplate, IdempotencyScope } from '../policy/TenantPolicy';
-import { loadTenantPolicy } from '../policy/TenantPolicy';
+import { TenantPolicyRegistry } from '../policy/registry/TenantPolicyRegistry';
 import type { ConversationProjection, LedgerSummary } from '../runtime/ConversationProjection';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,8 +59,10 @@ export interface BuildInput {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class CandidatePackBuilder {
+  constructor(private readonly registry: TenantPolicyRegistry) {}
+
   build(input: BuildInput): KernelInput {
-    const policy = loadTenantPolicy(input.tenant_id);
+    const policy = this.registry.get(input.tenant_id);
     const candidate_actions = deriveCandidateActions(input.claims, policy);
 
     return Object.freeze({
@@ -132,5 +134,3 @@ function normalizeClaim(c: Claim): Readonly<Record<string, unknown>> {
   });
 }
 
-// 单例
-export const candidatePackBuilder = new CandidatePackBuilder();

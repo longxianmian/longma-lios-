@@ -20,11 +20,16 @@ import { strict as assert } from 'node:assert';
 import { ActionResolver, generateActionId, hashUserInput } from '../../src/resolver/ActionResolver';
 import { CandidatePackBuilder } from '../../src/builder/CandidatePackBuilder';
 import { EvidenceBinder } from '../../src/binder/EvidenceBinder';
+import { ElectricCommercePolicy } from '../../src/policy/TenantPolicy';
+import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
 import { query } from '../../src/db/client';
 import type { Claim } from '../../src/extractor/ClaimExtractor';
 
+// γ-1: builder 接受 registry 注入
+const registry = new TenantPolicyRegistry();
+registry.register('demo', ElectricCommercePolicy);
 const resolver = new ActionResolver();
-const builder  = new CandidatePackBuilder();
+const builder  = new CandidatePackBuilder(registry);
 const binder   = new EvidenceBinder();
 
 function claim(t: Claim['type'], content: Record<string, unknown> = {}): Claim {

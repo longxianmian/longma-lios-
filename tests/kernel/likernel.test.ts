@@ -22,11 +22,16 @@ import { LIKernel } from '../../src/kernel/v2_1/LIKernel';
 import { CandidatePackBuilder } from '../../src/builder/CandidatePackBuilder';
 import { EvidenceBinder } from '../../src/binder/EvidenceBinder';
 import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/TenantPolicy';
+import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
 import { ConversationProjection } from '../../src/runtime/ConversationProjection';
 import type { Claim } from '../../src/extractor/ClaimExtractor';
 
+// γ-1: builder 接受 registry 注入
+const registry = new TenantPolicyRegistry();
+registry.register('demo', ElectricCommercePolicy);
+registry.register('healthcare-demo', HealthcareConsultPolicy);
 const kernel = new LIKernel();
-const builder = new CandidatePackBuilder();
+const builder = new CandidatePackBuilder(registry);
 const binder = new EvidenceBinder();
 
 function claim(t: Claim['type'], content: Record<string, unknown> = {}, target?: string): Claim {
