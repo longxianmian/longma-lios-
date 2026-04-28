@@ -1,32 +1,34 @@
 /**
- * v12 — lios_tenants 表（v2.2 Phase γ-2）
+ * v12 — lios_tenant_policies 表（v2.2 Phase γ-2）
  *
- * 多租户机制 schema 落地：γ-3 启动时从此表加载 tenants 注册到 TenantPolicyRegistry，
- * γ-5 lios_access_tokens 外键引用 tenant_id。
+ * 治理策略表：与 v2.1 lios_tenants 物理分离，外键引用 (ON DELETE CASCADE)。
  *
- * 字段（按 γ-2 决议精简版）：
- *   tenant_id    TEXT PRIMARY KEY      — 与 TenantPolicy.tenant_id 对齐
- *   display_name TEXT NOT NULL         — 后台 dashboard 展示用
- *   policy_id    TEXT NOT NULL         — 与 TenantPolicy.industry 对齐（γ-3 用 map
- *                                        把 'electric_commerce' / 'healthcare' 等
- *                                        解析为 const policy 实例；解耦 schema
- *                                        字段值与代码符号名）
- *   is_active    BOOLEAN DEFAULT true
- *   created_at   TIMESTAMPTZ DEFAULT now()
- *   updated_at   TIMESTAMPTZ DEFAULT now()
+ * 龙码三层架构（DB 层物理表达）：
+ *   - 基础设施层：LIOS + 信息资产化系统（并列，互不消费）
+ *   - 产品应用层：标典 / 天问 / 问问 / City One
+ *   只有产品应用注册 lios_tenants + lios_tenant_policies。资产化系统不走此流程。
+ *   先有商户身份（lios_tenants）才能挂治理策略（lios_tenant_policies）。
  *
- * 默认数据：3 行（与 γ-1 LIOSGovernanceService.constructor 注册的 registry 对齐）
- *   demo            → electric_commerce
- *   default         → electric_commerce
- *   healthcare-demo → healthcare
+ * 两套 token 边界（γ-5 必须遵守）：
+ *   1. v2.1 lios_tenants.token       — 商户登录令牌（身份认证, 后台管理系统登录）
+ *                                       绑定 (email + password_hash) → token；γ 阶段不动
+ *   2. γ-5 LIOSAccessControl token   — LIOS API 访问授权令牌（产品应用调
+ *                                       /lios/runtime/decide）
+ *                                       绑定 (tenant_id, source_app) → token
+ *                                       存 lios_access_tokens 表（γ-5 新建，非本次）
+ *   两套 token 完全独立，不互通。
  *
- * 蓝图修订:
- *   - v0.2 §γ-2 字段名 policy_class 暗示 class，但 γ-1 已确认 policy 是 const
- *     实例非 class；本 commit 用 policy_id 抽象化，γ-3 用 map 解析
- *   - v0.2 §γ-2 INSERT 'healthcare' 与 γ-1 真实 policy.tenant_id='healthcare-demo'
- *     不一致；本 commit 用 'healthcare-demo' 对齐
- *   - v0.2 §γ-2 还有 lios_tenant_tokens 表，已被 v0.3 §2.3 改名 lios_access_tokens
- *     并归 γ-5；本 commit 不建 token 表
+ * 字段：
+ *   tenant_id   TEXT PRIMARY KEY REFERENCES lios_tenants(tenant_id) ON DELETE CASCADE
+ *   policy_id   TEXT NOT NULL                          — 与 TenantPolicy.industry 对齐
+ *   is_active   BOOLEAN NOT NULL DEFAULT true
+ *   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+ *   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+ *
+ * 种子数据（按 Q1 决议）：
+ *   ('demo', 'electric_commerce')
+ *   不插 'default'（Q2 决议：γ-1 missing → throw 已锁，'default' 兜底逻辑不自洽）
+ *   不插 'healthcare-demo'（Q1 决议：v2.1 lios_tenants 未注册该商户，留 γ-4 决定）
  *
  * 回滚：见 migrate_v12_down.ts
  */
@@ -35,22 +37,19 @@ import 'dotenv/config';
 import { pool } from './client';
 
 const DDL_V12 = `
-CREATE TABLE IF NOT EXISTS lios_tenants (
-  tenant_id    TEXT        PRIMARY KEY,
-  display_name TEXT        NOT NULL,
-  policy_id    TEXT        NOT NULL,
-  is_active    BOOLEAN     NOT NULL DEFAULT true,
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS lios_tenant_policies (
+  tenant_id  TEXT        PRIMARY KEY
+              REFERENCES lios_tenants(tenant_id) ON DELETE CASCADE,
+  policy_id  TEXT        NOT NULL,
+  is_active  BOOLEAN     NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+`;
 
-CREATE INDEX IF NOT EXISTS idx_lios_tenants_active
-  ON lios_tenants (is_active) WHERE is_active = true;
-
-INSERT INTO lios_tenants (tenant_id, display_name, policy_id) VALUES
-  ('demo',            'Demo Electric Commerce', 'electric_commerce'),
-  ('default',         'Default Tenant',         'electric_commerce'),
-  ('healthcare-demo', 'Healthcare Consult',     'healthcare')
+const SEED_V12 = `
+INSERT INTO lios_tenant_policies (tenant_id, policy_id) VALUES
+  ('demo', 'electric_commerce')
 ON CONFLICT (tenant_id) DO NOTHING;
 `;
 
@@ -59,8 +58,9 @@ async function run() {
   try {
     await c.query('BEGIN');
     await c.query(DDL_V12);
+    await c.query(SEED_V12);
     await c.query('COMMIT');
-    console.log('✅ migrate_v12 done — lios_tenants');
+    console.log('✅ migrate_v12 done — lios_tenant_policies');
   } catch (e) {
     await c.query('ROLLBACK');
     console.error('❌ migrate_v12 failed:', e);
