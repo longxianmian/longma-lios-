@@ -27,20 +27,22 @@ import {
   type TraceLinkPayload,
 } from '../../src/api/governance';
 import { LIOSAccessControl, InvalidTokenError, type AccessContext } from '../../src/access/LIOSAccessControl';
-import { createTestService } from './_test-helpers';
+import { createMultiTenantTestService } from './_test-helpers';
 
 // γ-3：governance.ts 已不再 export `governanceService` const。
-// 这里建一个 testService 注入到 governance.ts 模块，并起 local alias 供下文 6 处复用
-// （setGovernanceService → 6 处 monkey-patch / inject 保持不变的最小改造）。
-const governanceService = createTestService();
+// γ-6：升级到 multi-tenant test service (含 demo + tianwen-demo)，让 T_TENANT_ISOLATION 走通。
+const governanceService = createMultiTenantTestService();
 setGovernanceService(governanceService);
 
-// γ-5：stub access control（避免测试依赖真实 lios_access_tokens 表数据）。
-// 仅接受 demo 测试 token，其他全部抛 InvalidTokenError。
+// γ-5/γ-6：stub access control（避免测试依赖真实 lios_access_tokens 表数据）。
+// 接受 demo + tianwen 测试 token，其他全部抛 InvalidTokenError。
 class StubAccessControl extends LIOSAccessControl {
   override async verify(token: string): Promise<AccessContext> {
     if (token === 'lios_test_token_demo_v22') {
       return Object.freeze({ tenant_id: 'demo', source_app: 'demo' });
+    }
+    if (token === 'lios_test_token_tianwen_demo_v22') {
+      return Object.freeze({ tenant_id: 'tianwen-demo', source_app: 'tianwen' });
     }
     throw new InvalidTokenError();
   }
@@ -48,6 +50,7 @@ class StubAccessControl extends LIOSAccessControl {
 setAccessControl(new StubAccessControl());
 
 const TEST_AUTH = { authorization: 'Bearer lios_test_token_demo_v22' };
+const TEST_AUTH_TIANWEN = { authorization: 'Bearer lios_test_token_tianwen_demo_v22' };
 
 // 测试期间默认 writeTraceLink 替换为 noop spy，避免触发真实 DB 写入。
 const writeCalls: TraceLinkPayload[] = [];
@@ -242,8 +245,63 @@ async function run(name: string, fn: () => Promise<void>) {
     __setWriteTraceLinkForTest(async () => { /* noop, restore test default */ });
   });
 
+  // ── γ-6：租户隔离测试沉淀 (γ-5 端到端 4 用例 → 永久回归锚点) ───────────────────
+  await run('T_AUTH_1 不带 Authorization → 401 + E_AUTH_001', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/lios/runtime/decide',
+      payload: { tenant_id: 'demo', source_app: 'test', session_id: 'gamma6-auth1', user_message: 'hi' },
+    });
+    assert.equal(res.statusCode, 401);
+    const body = res.json() as { error: string; message: string };
+    assert.equal(body.error, 'E_AUTH_001');
+    assert.equal(body.message, 'missing_authorization');
+  });
+
+  await run('T_AUTH_2 错 token → 401 + E_AUTH_002', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/lios/runtime/decide',
+      headers: { authorization: 'Bearer wrong_token_xyz' },
+      payload: { tenant_id: 'demo', source_app: 'test', session_id: 'gamma6-auth2', user_message: 'hi' },
+    });
+    assert.equal(res.statusCode, 401);
+    const body = res.json() as { error: string; message: string };
+    assert.equal(body.error, 'E_AUTH_002');
+    assert.equal(body.message, 'invalid_token');
+  });
+
+  await run('T_AUTH_3 demo token + body=tianwen-demo → 403 + E_AUTH_003 tenant_mismatch', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/lios/runtime/decide',
+      headers: TEST_AUTH,
+      payload: { tenant_id: 'tianwen-demo', source_app: 'test', session_id: 'gamma6-auth3', user_message: 'hi' },
+    });
+    assert.equal(res.statusCode, 403);
+    const body = res.json() as { error: string; message: string };
+    assert.equal(body.error, 'E_AUTH_003');
+    assert.match(body.message, /tenant_mismatch/);
+    assert.match(body.message, /demo/);
+    assert.match(body.message, /tianwen-demo/);
+  });
+
+  await run('T_TENANT_ISOLATION tianwen token + body=tianwen-demo → 200 + 不崩溃', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/lios/runtime/decide',
+      headers: TEST_AUTH_TIANWEN,
+      payload: { tenant_id: 'tianwen-demo', source_app: 'tianwen', session_id: 'gamma6-iso', user_message: 'hi' },
+    });
+    // 占位骨架走通: 不崩溃即可 (verdict 可能 reject 或 hold, 由 mock LLM 决定)
+    assert.equal(res.statusCode, 200, `expected 200, got ${res.statusCode}: ${res.body}`);
+    const body = res.json() as { verdict: string };
+    assert.ok(['accept', 'hold', 'reject'].includes(body.verdict),
+      `verdict should be one of accept/hold/reject, got ${body.verdict}`);
+  });
+
   console.log('━'.repeat(72));
-  console.log(`β-1 + β-2 + β-3 governance API：${pass}/${total} 通过`);
+  console.log(`β-1 + β-2 + β-3 + γ-6 governance API：${pass}/${total} 通过`);
   console.log('━'.repeat(72));
 
   await app.close();

@@ -20,7 +20,7 @@
  */
 
 import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
-import { ElectricCommercePolicy } from '../../src/policy/policies';
+import { ElectricCommercePolicy, TianwenPolicy } from '../../src/policy/policies';
 import { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
 import { injectMockLLM } from './_mock-llm';
 
@@ -34,6 +34,24 @@ export function createTestService(
   opts: { injectMock?: boolean } = { injectMock: true },
 ): LIOSGovernanceService {
   const service = new LIOSGovernanceService(createTestRegistry());
+  if (opts.injectMock !== false) {
+    injectMockLLM(service);
+  }
+  return service;
+}
+
+/**
+ * γ-6 引入：多租户测试 service。
+ * registry 注册 'demo' (ElectricCommerce) + 'tianwen-demo' (Tianwen 占位)，
+ * 用于 T_TENANT_ISOLATION 验证 tianwen token + body=tianwen-demo 走通占位骨架。
+ */
+export function createMultiTenantTestService(
+  opts: { injectMock?: boolean } = { injectMock: true },
+): LIOSGovernanceService {
+  const reg = new TenantPolicyRegistry();
+  reg.register('demo', ElectricCommercePolicy);
+  reg.register('tianwen-demo', TianwenPolicy);
+  const service = new LIOSGovernanceService(reg);
   if (opts.injectMock !== false) {
     injectMockLLM(service);
   }
