@@ -20,7 +20,7 @@
 
 import { query } from '../db/client';
 import { TenantPolicyRegistry } from '../policy/registry/TenantPolicyRegistry';
-import { policyById } from '../policy/TenantPolicy';
+import { policyById } from '../policy/policies';
 import { LIOSGovernanceService } from './LIOSGovernanceService';
 
 interface TenantPolicyRow {

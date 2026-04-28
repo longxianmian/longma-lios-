@@ -22,6 +22,8 @@
     "migrate:v11:down": "tsx src/db/migrate_v11_down.ts",
     "migrate:v12": "tsx src/db/migrate_v12.ts",
     "migrate:v12:down": "tsx src/db/migrate_v12_down.ts",
+    "migrate:v13": "tsx src/db/migrate_v13.ts",
+    "migrate:v13:down": "tsx src/db/migrate_v13_down.ts",
     "benchmark": "node scripts/benchmark.cjs",
     "benchmark:governance": "node scripts/benchmark-governance.cjs"
   },

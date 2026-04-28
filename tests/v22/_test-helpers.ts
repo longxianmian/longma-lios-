@@ -20,7 +20,7 @@
  */
 
 import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
-import { ElectricCommercePolicy } from '../../src/policy/TenantPolicy';
+import { ElectricCommercePolicy } from '../../src/policy/policies';
 import { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
 import { injectMockLLM } from './_mock-llm';
 

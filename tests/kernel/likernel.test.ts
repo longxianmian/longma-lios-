@@ -21,7 +21,7 @@ import { strict as assert } from 'node:assert';
 import { LIKernel } from '../../src/kernel/v2_1/LIKernel';
 import { CandidatePackBuilder } from '../../src/builder/CandidatePackBuilder';
 import { EvidenceBinder } from '../../src/binder/EvidenceBinder';
-import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/TenantPolicy';
+import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/policies';
 import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
 import { ConversationProjection } from '../../src/runtime/ConversationProjection';
 import type { Claim } from '../../src/extractor/ClaimExtractor';

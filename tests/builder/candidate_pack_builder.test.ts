@@ -17,7 +17,7 @@
 
 import { strict as assert } from 'node:assert';
 import { CandidatePackBuilder } from '../../src/builder/CandidatePackBuilder';
-import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/TenantPolicy';
+import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/policies';
 import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
 import { EvidenceBinder } from '../../src/binder/EvidenceBinder';
 import type { Claim } from '../../src/extractor/ClaimExtractor';

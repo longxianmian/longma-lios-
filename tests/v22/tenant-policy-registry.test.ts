@@ -12,7 +12,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { TenantPolicyRegistry } from '../../src/policy/registry/TenantPolicyRegistry';
-import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/TenantPolicy';
+import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../../src/policy/policies';
 
 let pass = 0, total = 0;
 async function run(name: string, fn: () => Promise<void> | void) {
