@@ -1,0 +1,18 @@
+
+> longma-lios@1.0.0 benchmark:governance
+> node scripts/benchmark-governance.cjs 5
+
+benchmark · iterations=5
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[chitchat] 3811ms 5087ms 5329ms 2760ms 4304ms 
+[kb_x9_price] 5851ms 3870ms 5227ms 5222ms 7473ms 
+[order_404] 6243ms 5714ms 4953ms 5825ms 6041ms 
+[compound] 10956ms 4609ms 5834ms 3580ms 3795ms 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+avg / min / max (ms):
+  chitchat     avg= 4258  min= 2760  max= 5329
+  kb_x9_price  avg= 5529  min= 3870  max= 7473
+  order_404    avg= 5755  min= 4953  max= 6243
+  compound     avg= 5755  min= 3580  max=10956
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+overall avg = 5324ms

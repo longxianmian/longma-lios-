@@ -1,0 +1,8 @@
+Phase β real-LLM 22 case telemetry (S1-S22)
+日期: 2026-04-28
+分支: v2.2-platformization (HEAD 357fe16 + scripts/benchmark-governance.cjs uncommitted)
+通过率: 20/22
+失败集合: {S12, S19}
+总耗时: 154s
+对比 α-3 baseline: α-3 5 跑分布 19/19/20/19/20, 集合 {S12, S15, S19}
+判定: β-5 通过率 20/22 + 失败集合属 α-3 已知波动子集, 真实 LLM 路径无系统性 β 引入退化

@@ -20,7 +20,8 @@
     "migrate:v10:down": "tsx src/db/migrate_v10_down.ts",
     "migrate:v11": "tsx src/db/migrate_v11.ts",
     "migrate:v11:down": "tsx src/db/migrate_v11_down.ts",
-    "benchmark": "node scripts/benchmark.cjs"
+    "benchmark": "node scripts/benchmark.cjs",
+    "benchmark:governance": "node scripts/benchmark-governance.cjs"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
