@@ -41,6 +41,74 @@
 - 优先级: 中 (工程交付层)
 - 处理时机: LIOS v2.2 完工后, 信息资产化系统 P0 启动前
 
+### OI-δ-002 — OTS 锚定证据归档（已解决补登记）
+
+- 状态: 🟢 已解决
+- 当前: `artifacts/ots/` 含 `v2.2-complete-hash.txt` + `.ots` + `README.md`
+- 解决路径: commit `242308f` (δ-补: OTS 锚定证据归档 artifacts/ots/)
+- Ref: v2.2-complete tag 锚定 commit `89e3b35`, 4 OTS 服务器 submit 成功
+
+### OI-δ-003 — lios_assets 系统调研 Task (待办)
+
+- 状态: 🔵 待执行
+- 起因: "标典先做用 lios_assets 凑合" 战略候选基于浅调研, 不能拍板; 需完整调研
+  lios_assets 真实代码 + 耦合 + 性能, 为后续战略决议提供真实情况依据
+- 调研 6 项 (含具体问题):
+
+  **1. 代码量盘点**
+  - `src/routes/assets.ts` / `src/services/kbCorpus.ts`
+  - `src/services/decision-helpers.ts` `retrieveKBSnippets` 实现
+  - 配套 worker / cache / cron 代码（如有）
+  - embedding 计算相关代码（如有）
+  - 输出: 总 LOC + 文件清单
+
+  **2. 耦合点完整 grep**
+  - `grep "lios_assets" / "kbCorpus" / "retrieveKBSnippets"` 命中
+  - 每个调用点上下文 5 行
+  - 间接依赖识别
+
+  **3. 索引机制真实实现**
+  - `embedding` 列由谁写入（HTTP `/reindex` / cron / worker?）
+  - embedding model 用什么
+  - `lios_embedding_cache` cache key 策略
+  - `is_indexed` boolean 翻转时机
+  - FTS GIN 索引维护策略
+
+  **4. 多租户隔离现状**
+  - `tenant_id` 列是否 NOT NULL
+  - 当前 4 行 demo 数据全是 'demo' — 设计如此还是没启用?
+  - `retrieveKBSnippets` 是否真按 `tenant_id` 过滤（grep SQL 验证）
+  - `scope` 列跟 `tenant_id` 是什么关系
+
+  **5. 性能边界估算**
+  - 4 行下检索响应（基线）
+  - 4000 行预估
+  - FTS + 向量索引 PG 实测
+  - `retrieveKBSnippets` 在 `decide()` 耗时占比
+
+  **6. 跟"独立资产化系统"对照**
+  - 资产登记 / 版本管理 / 流转 / 锚定 / 跨应用共享 各项有无
+  - 结论: lios_assets 是 "资产化系统极简前身" 还是 "完全不同方向"?
+
+- 输出: `docs/lios_assets_系统调研_v0.1.md`
+- 调研结果情况分类:
+  - **情况 A**: 简单 KB（200-400 LOC, 1-2 处耦合）→ lios_assets 可临时承担标典 KB
+  - **情况 B**: 复杂系统（1000+ LOC, 多处耦合）→ 标典直接用 lios_assets 风险高
+  - **情况 C**: 已接近资产化系统 → 重新审视战略（资产化 P0 = lios_assets 演进?）
+- 优先级: 高 (阻塞下一阶段战略决议 OI-δ-004)
+- 处理时机: 下次新对话首项
+
+### OI-δ-004 — lios_assets 战略决议 (pending OI-δ-003)
+
+- 状态: 🟡 pending OI-δ-003 调研完成
+- 待决议内容:
+  - **候选 X**: 按交接书原顺序（资产化系统作为独立基础设施层 P0, 与 lios_assets 完全分离）
+  - **候选 Y**: 标典先做用 lios_assets（lios_assets 临时承担标典 KB 角色）
+  - **候选 Z**: 并行（lios_assets 演进为资产化系统 + 标典同时用）
+  - **其他**: 视调研结果决定
+- 前置依赖: OI-δ-003 调研结果决定哪个候选可行
+- 处理时机: OI-δ-003 完成后立即决议
+
 ---
 
 ## 历史 OI (β 阶段及之前)
