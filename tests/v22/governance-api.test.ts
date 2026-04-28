@@ -1,12 +1,14 @@
 /**
- * β-1 验收测试：governance HTTP API 路由。
+ * β-1 + β-2 验收测试：governance HTTP API 路由 + 错误码标准化。
  *
  * 运行：npx tsx tests/v22/governance-api.test.ts
  *
- * 覆盖范围（按 β-1 决议精简：不做 token 验证 / 多租户隔离）：
- *   T1：缺 tenant_id → 400 + E_REQ_001
- *   T2：valid request (price inquiry) → 200 + verdict='accept'
- *   T3：out of scope (external service) → 200 + verdict='reject'
+ * 覆盖（按 β-1/β-2 决议精简：不做 token 验证 / 多租户隔离）：
+ *   T1：缺 tenant_id          → 400 + E_REQ_001
+ *   T2：valid (price inquiry) → 200 + verdict='accept'
+ *   T3：out of scope          → 200 + verdict='reject'
+ *   T4：service.decide 抛错   → 500 + E_KERNEL_001
+ *   T5：service.decide 超时   → 504 + E_TIMEOUT_001
  *
  * 用 fastify.inject() 内存调用，不需起真服务、不依赖 Redis / WS / workers。
  */
@@ -36,10 +38,10 @@ async function run(name: string, fn: () => Promise<void>) {
   await app.ready();
 
   console.log('━'.repeat(72));
-  console.log('β-1 测试：governance HTTP API（无 token，body.tenant_id 模式）');
+  console.log('β-1 + β-2 测试：governance HTTP API + 错误码标准化');
   console.log('━'.repeat(72));
 
-    await run('T1 缺 tenant_id → 400 + E_REQ_001', async () => {
+  await run('T1 缺 tenant_id → 400 + E_REQ_001', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/lios/runtime/decide',
@@ -85,8 +87,44 @@ async function run(name: string, fn: () => Promise<void>) {
     assert.equal(body.verdict, 'reject', `expected verdict=reject, got ${body.verdict}`);
   });
 
+  // T4 / T5 通过 monkey-patch service.decide 触发不同错误路径。
+  // 测试在 in-process 单例上 patch；不影响其他测试文件（每个 tsx 进程隔离）。
+  await run('T4 service.decide 抛错 → 500 + E_KERNEL_001', async () => {
+    (governanceService as unknown as { decide: () => Promise<never> }).decide =
+      async () => { throw new Error('synthetic kernel failure'); };
+    const res = await app.inject({
+      method: 'POST',
+      url: '/lios/runtime/decide',
+      payload: {
+        tenant_id: 'demo', source_app: 'test', session_id: 'beta2-t4', user_message: 'X9 多少钱',
+      },
+    });
+    assert.equal(res.statusCode, 500, `expected 500, got ${res.statusCode}: ${res.body}`);
+    const body = res.json() as { error: string; message: string; trace_id: string };
+    assert.equal(body.error, 'E_KERNEL_001', `expected E_KERNEL_001, got ${body.error}`);
+    assert.match(body.message, /synthetic kernel failure/);
+    assert.ok(typeof body.trace_id === 'string' && body.trace_id.length > 0, 'trace_id missing');
+  });
+
+  await run('T5 service.decide 超时 → 504 + E_TIMEOUT_001', async () => {
+    process.env.LIOS_API_DECIDE_TIMEOUT_MS = '50';
+    (governanceService as unknown as { decide: () => Promise<never> }).decide =
+      () => new Promise<never>(() => { /* 永不 resolve */ });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/lios/runtime/decide',
+      payload: {
+        tenant_id: 'demo', source_app: 'test', session_id: 'beta2-t5', user_message: 'X9 多少钱',
+      },
+    });
+    assert.equal(res.statusCode, 504, `expected 504, got ${res.statusCode}: ${res.body}`);
+    const body = res.json() as { error: string };
+    assert.equal(body.error, 'E_TIMEOUT_001', `expected E_TIMEOUT_001, got ${body.error}`);
+    delete process.env.LIOS_API_DECIDE_TIMEOUT_MS;
+  });
+
   console.log('━'.repeat(72));
-  console.log(`β-1 governance API：${pass}/${total} 通过`);
+  console.log(`β-1 + β-2 governance API：${pass}/${total} 通过`);
   console.log('━'.repeat(72));
 
   await app.close();
