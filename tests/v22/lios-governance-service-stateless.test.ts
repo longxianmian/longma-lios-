@@ -11,12 +11,10 @@
 
 import 'dotenv/config';
 import { strict as assert } from 'node:assert';
-import { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
 import type { DecideRequest } from '../../src/service/types';
-import { injectMockLLM } from './_mock-llm';
+import { createTestService } from './_test-helpers';
 
-const service = new LIOSGovernanceService();
-injectMockLLM(service);
+const service = createTestService();
 
 const baseReq: DecideRequest = Object.freeze({
   tenant_id: 'demo',

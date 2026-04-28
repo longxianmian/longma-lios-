@@ -309,6 +309,25 @@ export const HealthcareConsultPolicy: TenantPolicy = Object.freeze({
 });
 
 // γ-1: loadTenantPolicy() + REGISTRY const 已删除。
-// Policy 的注册/查找改由 src/policy/registry/TenantPolicyRegistry 承担，
-// 由 LIOSGovernanceService 在构造时注入并填充默认 policies。
-// γ-2/γ-3 后将改为启动时从 lios_tenants 表加载。
+// Policy 的注册/查找改由 src/policy/registry/TenantPolicyRegistry 承担。
+// γ-3: 注册改由 src/service/createGovernanceServiceFromDB() 启动时从
+// lios_tenant_policies 表加载（policyById map 见下）。
+
+// ─────────────────────────────────────────────────────────────────────────────
+// γ-3: policyById map (policy_id 字符串 → policy 常量)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 把 `lios_tenant_policies.policy_id` 字段值映射到 policy 常量。
+ *
+ * 用于 `src/service/createGovernanceServiceFromDB.ts` 工厂从 DB 加载时查找。
+ *
+ * γ-3 阶段 `lios_tenant_policies` 表只有 `'electric_commerce'` 一行（`'demo'` tenant），
+ * `'healthcare'` 留 γ-4 备用（`lios_tenants` 表当前没 `'healthcare-demo'` 商户身份）。
+ *
+ * 找不到 policy_id → 启动时工厂抛错（γ-3 红线 #3：找不到 → 启动失败，不静默）。
+ */
+export const policyById: Readonly<Record<string, TenantPolicy>> = Object.freeze({
+  electric_commerce: ElectricCommercePolicy,
+  healthcare:        HealthcareConsultPolicy,
+});

@@ -21,9 +21,9 @@
 
 import 'dotenv/config';
 import { strict as assert } from 'node:assert';
-import { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
+import type { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
 import type { DecideRequest, DecideResult, ProjectionSnapshot } from '../../src/service/types';
-import { injectMockLLM } from './_mock-llm';
+import { createTestService } from './_test-helpers';
 import { ConversationProjection } from '../../src/runtime/ConversationProjection';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -138,10 +138,8 @@ async function run(name: string, fn: () => Promise<void>) {
   // ───────────────────────────────────────────────────────────────────────────
   for (const seq of sequences) {
     await run(`等价性 ${seq.id} (${seq.turns.length} turn)`, async () => {
-      const service1 = new LIOSGovernanceService();
-      const service2 = new LIOSGovernanceService();
-      injectMockLLM(service1);
-      injectMockLLM(service2);
+      const service1 = createTestService();
+      const service2 = createTestService();
 
       const r1 = await runConversation(service1, `${seq.id}-1`, seq.turns);
       const r2 = await runConversation(service2, `${seq.id}-2`, seq.turns);
@@ -167,8 +165,7 @@ async function run(name: string, fn: () => Promise<void>) {
   // 关键不变量：律 2 family-track 累计在 projection_snapshot 入参下成立
   // ───────────────────────────────────────────────────────────────────────────
   await run('律 2 累计：S19 类 escalate 序列 verdict 序列形态正确', async () => {
-    const service = new LIOSGovernanceService();
-    injectMockLLM(service);
+    const service = createTestService();
     const records = await runConversation(service, 'law2-test', [
       '我之前买的产品坏了，我要找人工',
       '订单 9989890',
@@ -184,10 +181,8 @@ async function run(name: string, fn: () => Promise<void>) {
   // 关键不变量：service.decide 同步返回相同 ledger_payload 字段
   // ───────────────────────────────────────────────────────────────────────────
   await run('LedgerPayload 字段稳定（两次调用 deep-equal 主要字段）', async () => {
-    const service1 = new LIOSGovernanceService();
-    const service2 = new LIOSGovernanceService();
-    injectMockLLM(service1);
-    injectMockLLM(service2);
+    const service1 = createTestService();
+    const service2 = createTestService();
 
     const baseReq: DecideRequest = {
       tenant_id: 'demo', source_app: 't', session_id: 'lp-test',

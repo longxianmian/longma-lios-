@@ -11,10 +11,16 @@
  */
 
 import 'dotenv/config';
-import { conversationRuntime } from '../../src/runtime/ConversationRuntime';
+import { ConversationRuntime } from '../../src/runtime/ConversationRuntime';
 import { query } from '../../src/db/client';
+import { createTestService } from '../v22/_test-helpers';
 
 (async () => {
+  // γ-3：conversationRuntime 单例已删除（src/runtime/ConversationRuntime.ts mutable export pattern）。
+  // diagnostics 自己 new 一个，registry 注册 'demo'，LLM 组件用真实实现（不 mock）。
+  const service = createTestService({ injectMock: false });
+  const conversationRuntime = new ConversationRuntime(service);
+
   const sid = `oi005-fix-${Date.now()}`;
 
   console.log('━'.repeat(72));

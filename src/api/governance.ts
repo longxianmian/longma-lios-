@@ -26,7 +26,20 @@ import type { DecideRequest } from '../service/types';
 import { APIError, ErrorCodes, toErrorBody } from './errors';
 import { query } from '../db/client';
 
-export const governanceService = new LIOSGovernanceService();
+// γ-3：mutable export pattern。模块加载时不再 new，由 src/index.ts 启动时
+// createGovernanceServiceFromDB() 工厂建好后通过 setGovernanceService 注入。
+let _governanceService: LIOSGovernanceService | undefined;
+
+export function setGovernanceService(s: LIOSGovernanceService): void {
+  _governanceService = s;
+}
+
+export function getGovernanceService(): LIOSGovernanceService {
+  if (!_governanceService) {
+    throw new Error('governanceService not initialized — call setGovernanceService() at startup');
+  }
+  return _governanceService;
+}
 
 export interface TraceLinkPayload {
   readonly lios_trace_id: string;
@@ -107,7 +120,7 @@ export async function governanceRoutes(app: FastifyInstance) {
 
     try {
       const result = await withTimeout(
-        governanceService.decide({
+        getGovernanceService().decide({
           ...(body as DecideRequest),
           trace_id: body.trace_id ?? traceId,
         }),

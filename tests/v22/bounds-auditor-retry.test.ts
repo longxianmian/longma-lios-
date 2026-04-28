@@ -11,9 +11,9 @@
 
 import 'dotenv/config';
 import { strict as assert } from 'node:assert';
-import { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
 import type { DecideRequest } from '../../src/service/types';
-import { injectMockLLM, MockClaimExtractor } from './_mock-llm';
+import { MockClaimExtractor } from './_mock-llm';
+import { createTestService } from './_test-helpers';
 import type { Decision } from '../../src/kernel/v2_1/LIKernel';
 import type { AuditResult } from '../../src/auditor/BoundsAuditor';
 
@@ -43,8 +43,7 @@ const baseReq: DecideRequest = Object.freeze({
   // C1: structural pass + semantic pass → audit_layer = structural / semantic
   // ───────────────────────────────────────────────────────────────────────────
   await run('C1 默认通过路径 → audit_layer ∈ {structural, semantic}', async () => {
-    const service = new LIOSGovernanceService();
-    injectMockLLM(service);
+    const service = createTestService();
     const r = await service.decide(baseReq);
     assert.ok(['structural', 'semantic', 'fallback'].includes(r.ledger_payload.audit_layer));
     assert.equal(r.ledger_payload.audit_retried, false);
@@ -54,7 +53,7 @@ const baseReq: DecideRequest = Object.freeze({
   // C2: 第一次 generate 违反 → retry 一次 → 第二次通过
   // ───────────────────────────────────────────────────────────────────────────
   await run('C2 第一次违反 → retry 一次 → audit_retried=true', async () => {
-    const service = new LIOSGovernanceService();
+    const service = createTestService({ injectMock: false });
     (service as any).extractor = new MockClaimExtractor();
 
     // mock generator：第 1 次输出违规，第 2 次输出正常
@@ -106,7 +105,7 @@ const baseReq: DecideRequest = Object.freeze({
   // C3: retry 仍失败 → audit_layer='fallback'
   // ───────────────────────────────────────────────────────────────────────────
   await run('C3 retry 仍失败 → audit_layer=fallback', async () => {
-    const service = new LIOSGovernanceService();
+    const service = createTestService({ injectMock: false });
     (service as any).extractor = new MockClaimExtractor();
 
     // mock generator：每次都违规
@@ -144,8 +143,7 @@ const baseReq: DecideRequest = Object.freeze({
   // C4: BoundsAuditor 整体在 service.decide 内是原子操作（外部不感知中间状态）
   // ───────────────────────────────────────────────────────────────────────────
   await run('C4 调用方只看到最终 audited reply，不感知 retry 中间态', async () => {
-    const service = new LIOSGovernanceService();
-    injectMockLLM(service);
+    const service = createTestService();
     const r = await service.decide(baseReq);
     // result 接口只有 reply_draft 一个字段（最终输出），无 intermediate_replies / retry_history
     assert.ok('reply_draft' in r);

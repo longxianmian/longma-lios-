@@ -23,7 +23,7 @@ import { mockOrderVerifier } from '../verifiers/MockOrderVerifier';
 import { summarizeVerification, VerifyResult } from '../verifiers/types';
 import { getEscalationStatus, markEscalated } from '../services/conversationState';
 import { getOrderNotFoundAttempts } from '../services/orderProbeStats';
-import { conversationRuntime } from '../runtime/ConversationRuntime';
+import { getConversationRuntime } from '../runtime/ConversationRuntime';
 
 /** 当前 LIOS 实例可用 verifier 列表 — Phase 1 demo 阶段只有 mock */
 const AVAILABLE_VERIFIERS = ['mock'];
@@ -163,7 +163,7 @@ export async function chatRoutes(app: FastifyInstance) {
         });
       }
       try {
-        const r = await conversationRuntime.handle({
+        const r = await getConversationRuntime().handle({
           tenant_id, session_id, message, lang: req.body.lang,
           user_id: req.body.user_id, channel: 'web_sdk',
         });

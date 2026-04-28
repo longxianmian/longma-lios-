@@ -78,7 +78,16 @@ export interface HandoffContext {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class ConversationRuntime {
-  private readonly governanceService = new LIOSGovernanceService();
+  private readonly governanceService: LIOSGovernanceService;
+
+  /**
+   * γ-3：service 必填注入（与 LIOSGovernanceService.constructor 同模式）。
+   * 由 src/index.ts 启动时 `new ConversationRuntime(service)` 一次，
+   * 通过 setConversationRuntime 注入给路由层（chat.ts 等）使用。
+   */
+  constructor(governanceService: LIOSGovernanceService) {
+    this.governanceService = governanceService;
+  }
   private readonly projectionRepo = new ProjectionRepo();
   // claim 抽取：在 decide 之前需要它来检测 order.query
   // 这是 verifier 候选 C 的代价：runtime 必须自己先抽一次 claim
@@ -445,4 +454,18 @@ async function buildHandoffContextFromLedger(
 }
 
 // 单例
-export const conversationRuntime = new ConversationRuntime();
+// γ-3：mutable export pattern（与 governance.ts 同模式）。
+// 模块加载时不再 new，由 src/index.ts 启动时 `new ConversationRuntime(service)`
+// 后通过 setConversationRuntime 注入。
+let _conversationRuntime: ConversationRuntime | undefined;
+
+export function setConversationRuntime(r: ConversationRuntime): void {
+  _conversationRuntime = r;
+}
+
+export function getConversationRuntime(): ConversationRuntime {
+  if (!_conversationRuntime) {
+    throw new Error('conversationRuntime not initialized — call setConversationRuntime() at startup');
+  }
+  return _conversationRuntime;
+}

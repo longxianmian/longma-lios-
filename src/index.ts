@@ -12,7 +12,9 @@ import { decisionRoutes } from './routes/decisions';
 import { chatRoutes } from './routes/chat';
 import { compareTestRoutes } from './routes/compareTest';
 import { agentRoutes } from './routes/agent';
-import { governanceRoutes } from './api/governance';
+import { governanceRoutes, setGovernanceService } from './api/governance';
+import { ConversationRuntime, setConversationRuntime } from './runtime/ConversationRuntime';
+import { createGovernanceServiceFromDB } from './service/createGovernanceServiceFromDB';
 import { pool } from './db/client';
 import { redis, redisPub } from './queue/redis';
 import { ensureGroups } from './queue/streams';
@@ -43,6 +45,14 @@ async function main() {
     ],
   });
   await app.register(sensible);
+
+  // γ-3：启动时从 lios_tenant_policies 加载租户 policy，建 service + runtime 单例。
+  // 必须在任何 route register 之前完成，否则 route handler 第一次调用 getXxx() 会抛 "not initialized"。
+  const service = await createGovernanceServiceFromDB();
+  setGovernanceService(service);
+  const runtime = new ConversationRuntime(service);
+  setConversationRuntime(runtime);
+
   await app.register(healthRoutes);
   await app.register(liosRoutes);
   await app.register(pluginRoutes);

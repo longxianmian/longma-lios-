@@ -15,12 +15,12 @@
 import 'dotenv/config';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
+import type { LIOSGovernanceService } from '../../src/service/LIOSGovernanceService';
 import type { DecideRequest, ProjectionSnapshot, ExternalEvidence } from '../../src/service/types';
 import { ConversationProjection } from '../../src/runtime/ConversationProjection';
 import { mockOrderVerifier } from '../../src/verifiers/MockOrderVerifier';
 import { summarizeVerification } from '../../src/verifiers/types';
-import { injectMockLLM } from '../v22/_mock-llm';
+import { createTestService } from '../v22/_test-helpers';
 
 interface CaseDef {
   id: string;
@@ -158,8 +158,7 @@ async function runTurn(
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function runCase(c: CaseDef): Promise<CaseResult> {
-  const service = new LIOSGovernanceService();
-  injectMockLLM(service);
+  const service = createTestService();
 
   const session_id = `mock-${c.id}-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`;
   let projection = ConversationProjection.empty(session_id, 'demo');

@@ -20,14 +20,18 @@ import { strict as assert } from 'node:assert';
 import Fastify from 'fastify';
 import {
   governanceRoutes,
-  governanceService,
+  setGovernanceService,
   __setWriteTraceLinkForTest,
   __resetWriteTraceLink,
   type TraceLinkPayload,
 } from '../../src/api/governance';
-import { injectMockLLM } from './_mock-llm';
+import { createTestService } from './_test-helpers';
 
-injectMockLLM(governanceService);
+// γ-3：governance.ts 已不再 export `governanceService` const。
+// 这里建一个 testService 注入到 governance.ts 模块，并起 local alias 供下文 6 处复用
+// （setGovernanceService → 6 处 monkey-patch / inject 保持不变的最小改造）。
+const governanceService = createTestService();
+setGovernanceService(governanceService);
 
 // 测试期间默认 writeTraceLink 替换为 noop spy，避免触发真实 DB 写入。
 const writeCalls: TraceLinkPayload[] = [];

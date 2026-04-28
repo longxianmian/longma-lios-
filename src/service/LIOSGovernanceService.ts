@@ -24,7 +24,6 @@ import type { EvidencePack } from '../binder/EvidenceBinder';
 import { CandidatePackBuilder } from '../builder/CandidatePackBuilder';
 import type { KernelInput } from '../builder/CandidatePackBuilder';
 import { TenantPolicyRegistry } from '../policy/registry/TenantPolicyRegistry';
-import { ElectricCommercePolicy, HealthcareConsultPolicy } from '../policy/TenantPolicy';
 import { LIKernel } from '../kernel/v2_1/LIKernel';
 import type { Decision } from '../kernel/v2_1/LIKernel';
 import { ActionResolver } from '../resolver/ActionResolver';
@@ -82,12 +81,15 @@ export class LIOSGovernanceService {
   private readonly generator = new BoundedLLMGenerator();
   private readonly auditor = new BoundsAuditor();
 
-  constructor() {
-    // γ-1: 启动时注册默认 policies；γ-2/γ-3 后改为从 DB 加载
-    this.registry = new TenantPolicyRegistry();
-    this.registry.register('demo', ElectricCommercePolicy);
-    this.registry.register('default', ElectricCommercePolicy);
-    this.registry.register('healthcare-demo', HealthcareConsultPolicy);
+  /**
+   * γ-3 完整版：registry 必填注入。
+   * - γ-1 临时态硬编码 register('demo'/'default'/'healthcare-demo') 已彻底清除
+   * - registry 由调用方提供（启动时通过 createGovernanceServiceFromDB 工厂从
+   *   lios_tenant_policies 表加载；测试通过 createTestService helper 注入）
+   * - missing tenant_id → registry.get 抛错（γ-1 决议：多租户安全边界，不 fallback）
+   */
+  constructor(registry: TenantPolicyRegistry) {
+    this.registry = registry;
     this.builder = new CandidatePackBuilder(this.registry);
   }
 
@@ -403,5 +405,8 @@ function projectionFromSnapshot(snapshot: ProjectionSnapshot | undefined): Conve
   return snapshot as unknown as ConversationProjection;
 }
 
-// 单例
-export const liosGovernanceService = new LIOSGovernanceService();
+// γ-3 删除：原 `export const liosGovernanceService = new LIOSGovernanceService()`
+// 单例已移除。理由：0 外部引用（grep 验证）+ γ-1 遗留死代码。
+// 现改为：src/index.ts 启动时通过 createGovernanceServiceFromDB() 工厂从 DB
+// 加载 lios_tenant_policies 一次，通过 setGovernanceService / setConversationRuntime
+// 注入给路由层使用。tenant 来源真正从 DB 而来，γ-1 临时硬编码彻底清除。

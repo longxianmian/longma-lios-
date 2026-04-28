@@ -14,13 +14,19 @@ import { ClaimExtractor } from '../../src/extractor/ClaimExtractor';
 import { EvidenceBinder } from '../../src/binder/EvidenceBinder';
 import { CandidatePackBuilder } from '../../src/builder/CandidatePackBuilder';
 import { LIKernel } from '../../src/kernel/v2_1/LIKernel';
-import { conversationRuntime } from '../../src/runtime/ConversationRuntime';
+import { ConversationRuntime } from '../../src/runtime/ConversationRuntime';
 import { getKBSnapshot } from '../../src/services/kbCorpus';
 import { query } from '../../src/db/client';
+import { createTestService } from '../v22/_test-helpers';
 
 const USER_INPUT = '我買的大鵝羽絨服是殘次品';
 
 (async () => {
+  // γ-3：conversationRuntime 单例已删除（mutable export pattern）。
+  // diagnostics 自己 new 一个，registry 注册 'demo'，LLM 组件用真实实现（不 mock）。
+  const service = createTestService({ injectMock: false });
+  const conversationRuntime = new ConversationRuntime(service);
+
   console.log('━'.repeat(72));
   console.log('OI-005 诊断 ·「我買的大鵝羽絨服是殘次品」');
   console.log('━'.repeat(72));
